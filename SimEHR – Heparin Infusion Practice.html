@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimEHR – Heparin Infusion Practice</title>
+<style>
+:root{
+  --navy:#1b3a63; --blue:#2a64b0; --sky:#e9f1fb; --line:#b9c3cf; --ink:#1b1f24; --muted:#56606c;
+  --green:#1e7d4f; --greenbg:#e3f4ea; --red:#b42318; --redbg:#fdecea; --amber:#9a5b00; --amberbg:#fff3d6;
+  --sched:#1e3ee0; --schedRow:#cbd3f6; --prn:#21b721; --prnRow:#c6edc6; --cont:#1e3ee0; --contRow:#c6d9f5;
+  --dc:#7d838c; --dcRow:#e3e5e9; --cur:#ffff9e; --curCell:#ffffd4;
+}
+*{box-sizing:border-box}
+body{margin:0;font:12px/1.35 "Segoe UI",Tahoma,Arial,sans-serif;color:var(--ink);background:#e9edf2}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit}
+/* app chrome */
+.appbar{background:linear-gradient(#24548f,#1b3a63);color:#fff;display:flex;align-items:center;gap:14px;padding:5px 12px}
+.appbar .brand{font-weight:700;font-size:13px}
+.appbar .brand small{font-weight:400;opacity:.75;margin-left:6px}
+.appbar .sp{flex:1}
+.appbar .clock{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.14);padding:2px 10px;border-radius:3px}
+.tbtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:3px;padding:3px 10px}
+.tbtn:hover{background:rgba(255,255,255,.26)}
+.banner{background:#f7f9fc;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:stretch;gap:0}
+.banner .who{padding:7px 14px;border-right:1px solid #dde3ea;min-width:230px}
+.banner .who .nm{font-size:15px;font-weight:700;color:var(--navy)}
+.banner .blk{padding:6px 12px;border-right:1px solid #dde3ea;display:flex;flex-direction:column;justify-content:center}
+.banner .blk span{color:var(--muted);font-size:11px}
+.banner .blk b{font-weight:600}
+.banner .alg{background:var(--redbg);color:var(--red)}
+.banner .alg span{color:var(--red)}
+.trainbar{background:#fff3c4;color:#6b4e00;text-align:center;font-size:11px;padding:2px;border-bottom:1px solid #e9d27a}
+.tabs{display:flex;gap:2px;background:#d6dee8;padding:5px 10px 0;border-bottom:1px solid var(--line)}
+.tab{border:1px solid var(--line);border-bottom:none;background:#eaf0f6;padding:5px 18px;border-radius:4px 4px 0 0;color:var(--navy);font-weight:600}
+.tab.on{background:#fff;position:relative;top:1px}
+.panel{display:none;background:#fff;min-height:calc(100vh - 150px)}
+.panel.on{display:block}
+.badge{display:inline-block;border-radius:3px;padding:1px 6px;font-size:10.5px;font-weight:700}
+.b-high{background:#fde2e1;color:#9b1c1c;border:1px solid #f5b5b2}
+.b-act{background:var(--greenbg);color:var(--green)}
+.b-dc{background:#e9ecef;color:#6c757d}
+.mono{font-family:Consolas,Menlo,monospace}
+.muted{color:var(--muted)}
+/* orders */
+.opad{padding:12px}
+.card{border:1px solid var(--line);border-radius:4px;margin-bottom:12px;background:#fff}
+.card h3{margin:0;font-size:12.5px;background:linear-gradient(#f3f7fc,#dfe9f6);color:var(--navy);padding:6px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.card .body{padding:10px}
+table{border-collapse:collapse;width:100%}
+.ot th,.ot td{border-bottom:1px solid #e3e8ee;padding:5px 8px;text-align:left;vertical-align:top}
+.ot th{background:#f3f5f8;font-size:11px;color:var(--muted);font-weight:600}
+tr.dc td{color:#8a96a3;text-decoration:line-through}
+tr.dc td.nostrike{text-decoration:none}
+.ordname{font-weight:700;color:var(--navy)}
+.ordsub{color:var(--muted);font-size:11.5px}
+.nomo td,.nomo th{text-align:center}
+.nomo td:first-child{text-align:left}
+.lab-h{color:var(--red);font-weight:700}
+.lab-l{color:var(--blue);font-weight:700}
+/* MAR */
+.mtool{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--line);background:#f4f6f9}
+.mtool select{padding:2px 4px}
+.datebar{flex:1;min-width:260px;display:flex;align-items:center;gap:6px;background:linear-gradient(#e9eef5,#d3dce8);border:1px solid var(--line);padding:3px 8px;font-weight:700;color:#333}
+.datebar .nav{border:1px solid #9aa6b4;background:#fff;padding:0 6px;border-radius:2px;color:#555}
+.datebar .d{margin-left:auto}
+.scanrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--line)}
+.scanrow input{width:230px;padding:4px 7px;border:2px solid var(--blue);border-radius:3px}
+.pv{padding:3px 9px;border-radius:3px;font-weight:600}
+.pv.no{background:var(--amberbg);color:var(--amber);border:1px solid #f0d08a}
+.pv.yes{background:var(--greenbg);color:var(--green);border:1px solid #9fd5b7}
+.marwrap{display:flex;align-items:stretch;min-height:520px}
+.mside{width:196px;flex:none;border-right:1px solid var(--line);background:#c9ced6;display:flex;flex-direction:column}
+.mside .rc{background:#fff;padding:5px 6px;border-bottom:1px solid var(--line);display:flex;gap:5px;align-items:center}
+.mside .vh{background:linear-gradient(#e6e9ee,#c8ced7);text-align:center;font-weight:700;color:#3a4a62;padding:4px;border-bottom:1px solid #9aa4b1}
+.mside .cat{display:flex;align-items:center;gap:6px;padding:4px 6px;color:#fff;border-bottom:1px solid rgba(255,255,255,.35);cursor:pointer;user-select:none}
+.mside .cat input{margin:0}
+.mside .cat.empty{opacity:.75}
+.mside .fill{flex:1;background:#e7eaee}
+.mside .views div{background:linear-gradient(#e9ecf0,#cfd5dd);text-align:center;color:#3a4a62;font-weight:600;padding:3px;border-top:1px solid #a7b0bc;cursor:default}
+.gridwrap{flex:1;min-width:0;overflow:auto;background:#fff}
+.mar{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+.mar th,.mar td{border-right:1px solid #9fb0c4;border-bottom:1px solid #9fb0c4;padding:3px 6px;vertical-align:top}
+.mar thead th{background:linear-gradient(#f4f6f9,#dbe1e9);font-weight:600;text-align:center;position:sticky;top:0;z-index:3;white-space:nowrap}
+.mar thead th.cur{background:var(--cur)}
+.mar .medcol{position:sticky;left:0;z-index:2;width:330px;min-width:330px;max-width:330px}
+.mar thead th.medcol{z-index:4}
+.mar td.tc{width:118px;min-width:118px;font-size:11.5px}
+.mar td.tc.cur{background:var(--curCell)}
+.band td{color:#fff;font-weight:700;padding:2px 6px}
+.band td.medcol{background:inherit}
+.mrow td.medcol{cursor:default}
+.mrow .icons{display:flex;gap:3px;margin-bottom:2px}
+.ico{display:inline-flex;align-items:center;justify-content:center;width:16px;height:15px;border:1px solid #777;border-radius:2px;font-size:9px;font-weight:700;background:#fff;color:#333}
+.ico.ha{background:#ffd400;border-color:#b58b00;color:#7a0000}
+.ico.dc{background:#ddd}
+.mname{font-weight:700}
+.msig{font-size:11px;color:#2b2f35}
+.srow td.medcol{background:#fff;color:#222;padding-left:10px}
+.srow td.tc{background:#fff}
+.srow td.tc.cur{background:var(--curCell)}
+.srow.lbl td.medcol{font-weight:700;color:#334;background:#eef1f5}
+.srow.lbl td.tc{background:#eef1f5}
+.cv b{display:block}
+.cv small{color:#444}
+.cv.click{cursor:pointer}
+.cv.click:hover{text-decoration:underline}
+.chip{display:inline-block;padding:1px 5px;border-radius:2px;font-weight:700;font-size:11px;border:1px solid transparent}
+.c-due{background:var(--amberbg);color:var(--amber);border-color:#f0d08a}
+.c-over{background:var(--redbg);color:var(--red);border-color:#f3b8b2}
+.c-fut{background:#eef1f5;color:#56606c;border-color:#d8dee6}
+.c-run{background:#e2ecff;color:#1d4ed8;border-color:#b9cdf7}
+.ovr{color:var(--amber);font-weight:700}
+.link{background:none;border:none;color:var(--blue);text-decoration:underline;padding:0;font-size:11px}
+#tip{position:fixed;z-index:70;display:none;max-width:440px;background:#fff;border:1px solid #333;box-shadow:2px 3px 8px rgba(0,0,0,.35);padding:8px 10px;font-size:11.5px;pointer-events:none}
+#tip p{margin:0 0 6px}
+#tip .box{border:2px solid #d22;padding:2px 4px;margin:4px 0}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(15,25,40,.45);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;z-index:50;overflow:auto}
+.scrim.on{display:flex}
+.modal{background:#fff;border-radius:6px;width:min(640px,100%);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.modal.wide{width:min(1000px,100%)}
+.modal header{background:var(--navy);color:#fff;padding:9px 14px;border-radius:6px 6px 0 0;font-weight:700}
+.modal header.alert{background:var(--red)}
+.modal header.caution{background:var(--amber)}
+.modal .mb{padding:14px}
+.modal footer{padding:9px 14px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;background:#f6f8fa;border-radius:0 0 6px 6px}
+.btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:3px;padding:5px 12px}
+.btn:hover{filter:brightness(1.08)}
+.btn.sec{background:#fff;color:var(--blue)}
+.btn.warn{background:var(--red);border-color:var(--red)}
+.btn.sm{padding:2px 8px;font-size:11.5px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.fgrid label{display:flex;flex-direction:column;gap:3px;font-weight:600;font-size:11.5px;color:var(--muted)}
+.fgrid input{padding:5px 7px;border:1px solid #b9c4d0;border-radius:3px}
+/* administration window (Epic-style) */
+.aw-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:10px 14px 8px;border-bottom:1px solid #d5dde7}
+.aw-name{color:#1e5aa8;font-size:17px;font-weight:600}
+.aw-sig{font-size:12px;color:#333}
+.aw-ovr{background:var(--amberbg);color:var(--amber);border-bottom:1px solid #f0d08a;padding:5px 14px;font-weight:600}
+.aw-grid{display:grid;grid-template-columns:260px 1fr;min-height:360px}
+.aw-left{border-right:1px solid #d5dde7;padding:10px 12px;font-size:11.5px;background:#fbfcfd}
+.aw-lh{font-weight:700;color:#1e5aa8;font-size:13px;margin-bottom:8px}
+.aw-left dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 8px}
+.aw-left dt{color:#555;text-align:right;white-space:nowrap}
+.aw-left dd{margin:0;font-weight:600}
+.aw-right{padding:10px 12px;background:#fff;min-width:0}
+.aw-fields>*{min-width:0}
+.aw-fields input,.aw-fields select{width:100%}
+.aw-fields .chk input{width:auto}
+.aw-sec{border:1px solid #c5d3e6;border-radius:4px;margin-bottom:10px;background:#f7faff}
+.aw-sh{background:linear-gradient(#eaf2fc,#d6e5f7);color:#1b3a63;font-weight:700;font-size:13px;padding:5px 10px;border-bottom:1px solid #c5d3e6;border-radius:4px 4px 0 0}
+.aw-sh:before{content:"▦ ";color:#2a64b0}
+.aw-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;padding:10px}
+.aw-fields label{display:flex;flex-direction:column;gap:2px;font-size:11.5px;color:#444}
+.aw-fields .s2{grid-column:span 2}
+.aw-fields .s3{grid-column:1/-1}
+.aw-fields input,.aw-fields select{padding:4px 6px;border:1px solid #9fb0c4;border-radius:2px;background:#fff;color:var(--ink)}
+.aw-fields input[readonly]{background:#eef1f5}
+.aw-fields .chk{flex-direction:row;align-items:flex-start;gap:6px}
+.aw-fields .chk input{margin-top:2px}
+.iu{display:flex;align-items:center;gap:5px}
+.iu input{flex:1;min-width:0}
+.aw-ftop{display:flex;gap:16px;align-items:center;padding:8px 10px 0;font-size:11.5px;color:#333;flex-wrap:wrap}
+.aw-info{border:2px solid #4a7fc1;border-radius:10px;padding:8px 12px;color:#1b3a63;background:#f3f8ff;margin-bottom:10px}
+.aw-warn{grid-column:1/-1;background:var(--amberbg);border:1px solid #f0d08a;color:#6b3f00;padding:7px 9px;border-radius:3px}
+.fb{margin-top:6px;border-radius:4px;padding:7px 10px}
+.fb.bad{background:var(--redbg);border:1px solid #f3b8b2;color:#7a1a12}
+.fb ul{margin:3px 0 0 18px;padding:0}
+@media (max-width:820px){.aw-grid{grid-template-columns:1fr}.aw-left{border-right:none;border-bottom:1px solid #d5dde7}.aw-fields{grid-template-columns:1fr 1fr}.mside{display:none}}
+/* instructor */
+.instr{position:fixed;right:0;top:0;bottom:0;width:350px;background:#fff;border-left:2px solid var(--navy);box-shadow:-8px 0 24px rgba(0,0,0,.15);z-index:40;transform:translateX(100%);transition:transform .2s;overflow:auto}
+.instr.on{transform:none}
+.instr h4{margin:14px 14px 6px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
+.instr .sec{padding:0 14px}
+.instr .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center}
+.instr input,.instr select{padding:4px 6px;border:1px solid #b9c4d0;border-radius:3px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:8px 16px;border-radius:5px;z-index:80;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.lbl{border:1px solid #999;border-radius:6px;padding:8px 10px;background:#fff}
+.lbl.band{border-radius:20px;border:2px solid #8fb3d9;background:#f7fbff}
+.lbl .t{font-weight:700}
+.lbl .s{font-size:11px;color:#444}
+.lbl .note{font-size:11px;color:var(--amber);font-style:italic;margin-top:3px}
+.lbl svg{display:block;margin-top:6px;max-width:100%;height:auto;background:#fff}
+.dtl{display:grid;grid-template-columns:150px 1fr;gap:4px 10px}
+.dtl div:nth-child(odd){color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="brand">⌂ SimEHR<small>Training Environment</small></div>
+  <div class="sp"></div>
+  <div class="clock" id="clock" title="Simulation clock">--</div>
+  <div id="userLbl">Not signed in</div>
+  <button class="tbtn" id="btnInstr">Instructor</button>
+</div>
+<div class="banner" id="banner"></div>
+<div class="trainbar">FOR EDUCATIONAL USE ONLY — simulated patient and orders. Not for clinical use. Always follow your facility's heparin protocol.</div>
+<div class="tabs">
+  <button class="tab on" data-tab="orders">Orders</button>
+  <button class="tab" data-tab="mar">MAR</button>
+</div>
+<section class="panel on" id="p-orders"></section>
+<section class="panel" id="p-mar"></section>
+
+<div id="tip"></div>
+<div class="instr" id="instr"></div>
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== DATA ===================== */
+const W = 82; // dosing weight kg
+const PT = {
+  name:'Whitaker, Harold J.', dob:'03/14/1958', age:68, sex:'Male', mrn:'1048572', room:'4 West – 412-A',
+  heightCm:178, allergies:'Penicillins (rash)', code:'Full Code', attending:'Okafor, Renee MD',
+  dx:'Acute pulmonary embolism (right lower lobe)', iso:'None'
+};
+const BASE = new Date(); BASE.setHours(0,0,0,0);
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const ORDERS = [
+  {id:'hepBolus', kind:'bolus', cat:'unsched', hi:true, status:'Active', group:'heparin',
+   name:'heparin (porcine) injection — initial bolus', mar:'heparin (heparin bolus)',
+   sig:'80 unit/kg, IV push, ONCE, drug form: inj, start: {D} 08:00',
+   dose:'80 units/kg IV push × 1', calc:'Dosing weight 82 kg. Round to nearest 100 units. Max bolus 10,000 units.',
+   product:'heparin 1,000 units/mL, 10 mL multi-dose vial', disp:'4W Automated Dispensing Cabinet', route:'IV push', freq:'ONCE', sched:[8*60],
+   start:'Today 08:00', codes:['HEP1000'], subs:['heparin','PTT'], unit:'unit'},
+  {id:'hepInf', kind:'infusion', cat:'cont', hi:true, status:'Active', group:'heparin',
+   name:'heparin 25,000 units in sodium chloride 0.45% 250 mL infusion (premix)', mar:'heparin additive 25,000 unit + sodium chloride 0.45% premix 250 mL',
+   sig:'titrate, IV, starting rate: 18 unit/kg/h, titrate instructions: Titrate per Nomogram, start: {D} 08:00, volume (mL): 250',
+   dose:'Initial 18 units/kg/hr IV continuous; titrate per VTE nomogram', calc:'Concentration 100 units/mL. Dosing weight 82 kg. Round to nearest 10 units/hr. Max initial rate 2,000 units/hr.',
+   product:'heparin 25,000 units/250 mL premix bag (pharmacy-labeled)', disp:'Pharmacy', route:'IV continuous', freq:'Continuous', sched:[8*60],
+   start:'Today 08:00', codes:['HEP25K572'], subsLabel:'Administration Information', subs:['heparin','sodium chloride 0.45% premix','PTT'], unit:'unit/h'},
+  {id:'hepRebolus', kind:'rebolus', cat:'prn', hi:true, status:'Active', group:'heparin',
+   name:'heparin (porcine) injection — rebolus per nomogram', mar:'heparin (heparin bolus)',
+   sig:'40 or 80 unit/kg, IV push, as directed, PRN other (see comment), drug form: inj, start: {D} 08:00',
+   prnReason:'Subsequent IV bolus for PTT less than goal per nomogram',
+   dose:'40 or 80 units/kg IV push PRN per nomogram', calc:'Dosing weight 82 kg. Round to nearest 100 units.',
+   product:'heparin 1,000 units/mL, 10 mL multi-dose vial', disp:'4W Automated Dispensing Cabinet', route:'IV push', freq:'PRN per aPTT', sched:[],
+   start:'Today 08:00', codes:['HEP1000'], subs:['heparin','PTT'], unit:'unit', prn:true},
+  {id:'hepSQ', kind:'std', cat:'sched', hi:true, status:'Discontinued', group:'heparin',
+   name:'heparin (porcine) injection 5,000 units', mar:'heparin',
+   sig:'5,000 unit, subcut, q8h, drug form: inj, start: {D} 06:30, stop: {D} 07:40',
+   dose:'5,000 units subcutaneous every 8 hours (VTE prophylaxis)', calc:'',
+   product:'heparin 5,000 units/mL, 1 mL vial', disp:'4W Automated Dispensing Cabinet', route:'Subcutaneous', freq:'q8h', sched:[6*60,14*60,22*60],
+   start:'Today 06:30', dc:'D/C today 07:40 by Okafor, Renee MD — therapeutic anticoagulation ordered', codes:['HEP5000'], subs:['heparin'], unit:'unit'},
+  {id:'panto', kind:'std', cat:'sched', status:'Active', group:'other',
+   name:'pantoprazole (PROTONIX) EC tablet 40 mg', mar:'pantoprazole',
+   sig:'40 mg, PO, daily, drug form: tab, start: {D} 09:00',
+   dose:'40 mg by mouth daily before breakfast', calc:'', instr:'Swallow whole. Do not crush or chew.',
+   product:'pantoprazole 40 mg EC tablet', disp:'4W Automated Dispensing Cabinet', route:'Oral', freq:'Daily 0900', sched:[9*60], start:'Today 09:00', codes:['PANTO40'], subs:['pantoprazole'], expect:{dose:40,unit:'mg'}},
+  {id:'apap', kind:'std', cat:'prn', status:'Active', group:'other', prn:true,
+   name:'acetaminophen (TYLENOL) tablet 650 mg', mar:'acetaminophen',
+   sig:'650 mg, PO, q6h, PRN mild pain or temp > 38.3 °C, drug form: tab, start: {D} 06:30. Maximum 3 g/24 h',
+   prnReason:'Mild pain (1–3) or temperature > 38.3 °C',
+   dose:'650 mg by mouth every 6 hours PRN mild pain or temp > 38.3 °C. Max 3 g/day.', calc:'', instr:'Ordered admin dose: 2 tablets (2 × 325 mg).',
+   product:'acetaminophen 325 mg tablet', disp:'4W Automated Dispensing Cabinet', route:'Oral', freq:'q6h PRN', sched:[], start:'Today 06:30', codes:['APAP325'], subs:['acetaminophen'], expect:{dose:650,unit:'mg'}},
+  {id:'flush', kind:'std', cat:'sched', status:'Active', group:'other',
+   name:'sodium chloride 0.9% flush 10 mL', mar:'sodium chloride 0.9% flush',
+   sig:'10 mL, IV, q8h and PRN line care, start: {D} 06:00',
+   dose:'10 mL IV every 8 hours and PRN line care', calc:'',
+   product:'0.9% NaCl 10 mL prefilled syringe', disp:'4W Supply', route:'IV', freq:'q8h + PRN', sched:[6*60,14*60,22*60], start:'Today 06:00', codes:['NSFLUSH10'], subs:['sodium chloride 0.9%'], expect:{dose:10,unit:'mL'}}
+];
+const NONMED = [
+  ['Lab','aPTT — 6 hours after initial bolus/infusion start and 6 hours after every rate change. When 2 consecutive results are therapeutic, then daily at 0500.','Active'],
+  ['Lab','CBC with platelets — baseline, then daily at 0500 while on heparin.','Active'],
+  ['Lab','PT/INR — baseline.','Completed'],
+  ['Nursing','Independent double check by 2 RNs required for bolus, infusion start, every rate change, and bag change (high-alert medication). Verify patient, dosing weight, concentration, dose, rate, and pump programming.','Active'],
+  ['Nursing','Bleeding precautions. Assess for bleeding (gums, urine, stool, IV sites, neuro changes) every 4 hours.','Active'],
+  ['Nursing','No IM injections while on heparin infusion.','Active'],
+  ['Notify','Notify provider: aPTT > 150 sec; platelet count < 100,000/mm³ or drop ≥ 50% from baseline; any bleeding; infusion held > 1 hour for any reason other than nomogram.','Active'],
+  ['Diet','Regular diet.','Active'],
+  ['Activity','Up with assistance as tolerated.','Active']
+];
+const NOMO = [
+  {k:'A', range:'< 35', lo:-Infinity, hi:34.999, bolus:80, hold:0, chg:+4, text:'Rebolus 80 units/kg; increase rate by 4 units/kg/hr'},
+  {k:'B', range:'35 – 45', lo:35, hi:45.999, bolus:40, hold:0, chg:+2, text:'Rebolus 40 units/kg; increase rate by 2 units/kg/hr'},
+  {k:'C', range:'46 – 70 (therapeutic)', lo:46, hi:70.999, bolus:0, hold:0, chg:0, text:'No change'},
+  {k:'D', range:'71 – 90', lo:71, hi:90.999, bolus:0, hold:0, chg:-2, text:'Decrease rate by 2 units/kg/hr'},
+  {k:'E', range:'> 90', lo:91, hi:Infinity, bolus:0, hold:60, chg:-3, text:'Hold infusion 1 hour; then decrease rate by 3 units/kg/hr'}
+];
+const CATS = [
+  {k:'sched', label:'Scheduled', band:'var(--sched)', row:'var(--schedRow)'},
+  {k:'unsched', label:'Unscheduled', band:'var(--sched)', row:'var(--schedRow)'},
+  {k:'prn', label:'PRN', band:'var(--prn)', row:'var(--prnRow)'},
+  {k:'cont', label:'Continuous Infusions', band:'var(--cont)', row:'var(--contRow)'},
+  {k:'future', label:'Future', band:'var(--sched)', row:'var(--schedRow)'},
+  {k:'dc-sched', label:'Discontinued Scheduled', band:'var(--dc)', row:'var(--dcRow)'},
+  {k:'dc-unsched', label:'Discontinued Unscheduled', band:'var(--dc)', row:'var(--dcRow)'},
+  {k:'dc-prn', label:'Discontinued PRN', band:'var(--dc)', row:'var(--dcRow)'},
+  {k:'dc-cont', label:'Discontinued Continuous Infusions', band:'var(--dc)', row:'var(--dcRow)'}
+];
+const catOf = o => o.status==='Discontinued' ? 'dc-'+o.cat : o.cat;
+const SCAN = {
+  'MRN1048572':{type:'pt', ok:true},
+  'MRN1048527':{type:'pt', ok:false, name:'Whitaker, Harriet M.', dob:'09/02/1961', mrn:'1048527'},
+  'HEP25K572':{type:'med', label:'heparin 25,000 units / 250 mL 0.45% NaCl (100 units/mL) — pharmacy label: WHITAKER, HAROLD J. MRN 1048572'},
+  'HEP25K527':{type:'med', wrongPt:true, label:'heparin 25,000 units / 250 mL 0.45% NaCl — pharmacy label: WHITAKER, HARRIET M. MRN 1048527'},
+  'HEP1000':{type:'med', label:'heparin 1,000 units/mL, 10 mL multi-dose vial'},
+  'HEP5000':{type:'med', label:'heparin 5,000 units/mL, 1 mL vial'},
+  'HEPFLUSH10':{type:'med', label:'heparin lock flush 10 units/mL, 5 mL syringe', msg:'No active order for heparin lock flush. Look-alike product: 10 units/mL is NOT the 1,000 units/mL product dispensed for the bolus. Heparin concentration mix-ups are a known source of fatal errors.'},
+  'ENOX80':{type:'med', label:'enoxaparin 80 mg/0.8 mL prefilled syringe', msg:'No active order for enoxaparin. Giving a second anticoagulant with a heparin infusion is a duplicate-therapy error with serious bleeding risk.'},
+  'PANTO40':{type:'med', label:'pantoprazole 40 mg EC tablet'},
+  'APAP325':{type:'med', label:'acetaminophen 325 mg tablet'},
+  'NSFLUSH10':{type:'med', label:'0.9% sodium chloride 10 mL flush syringe'}
+};
+
+/* ===================== STATE ===================== */
+let S;
+function freshState(){
+  return {
+    user:S?S.user:null, initials:S?S.initials:'',
+    simMin: 8*60 - 3,
+    feedback: S?S.feedback:true,
+    filters: S?S.filters:Object.fromEntries(CATS.map(c=>[c.k,true])),
+    showRate: true,
+    ptVerifiedAt: null,
+    inf: {status:'Not started', ukg:null, uh:null, rate:null, holdUntil:null, lastChange:null, pendingRestart:null},
+    rebolusDue: null,
+    labs: [
+      {test:'aPTT', val:31, unit:'sec', ref:'25 – 35', t:7*60+5},
+      {test:'PT', val:12.1, unit:'sec', ref:'11 – 13.5', t:7*60+5},
+      {test:'INR', val:1.0, unit:'', ref:'0.8 – 1.1', t:7*60+5},
+      {test:'Hemoglobin', val:13.8, unit:'g/dL', ref:'13.5 – 17.5', t:7*60+5},
+      {test:'Platelets', val:245, unit:'×10³/mm³', ref:'150 – 400', t:7*60+5},
+      {test:'Creatinine', val:0.9, unit:'mg/dL', ref:'0.7 – 1.3', t:7*60+5}
+    ],
+    admins: [], events: []
+  };
+}
+S = freshState();
+
+/* ===================== UTIL ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+function hm(min){ const m=((min%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); }
+function dayOf(min){ return Math.floor(min/1440); }
+function dObj(min){ return new Date(BASE.getTime()+dayOf(min)*864e5); }
+function dmy(min){ const d=dObj(min); return pad(d.getDate())+'-'+MON[d.getMonth()]+'-'+d.getFullYear(); }
+function longDate(min){ const d=dObj(min); return d.toLocaleDateString(undefined,{weekday:'long'})+', '+pad(d.getDate())+'-'+MONL[d.getMonth()]+'-'+d.getFullYear(); }
+function mdy(min){ const d=dObj(min); return pad(d.getMonth()+1)+'/'+pad(d.getDate())+'/'+d.getFullYear(); }
+function stamp(min){ return dmy(min)+' '+hm(min); }
+const r100 = x => Math.round(x/100)*100;
+const r10 = x => Math.round(x/10)*10;
+const fmtN = n => n==null||n===''||isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2600); }
+function log(text){ S.events.push({t:S.simMin, text}); }
+function nomoFor(v){ return NOMO.find(n=>v>=n.lo && v<=n.hi); }
+function latest(test){ const a=S.labs.filter(l=>l.test===test); return a[a.length-1]; }
+function aPTTsinceChange(){ const l=latest('aPTT'); return l && S.inf.lastChange!=null && l.t>S.inf.lastChange ? l : null; }
+function nextAPTT(){ return S.inf.lastChange==null?null:S.inf.lastChange+360; }
+const sigOf = o => o.sig.replace(/\{D\}/g, dmy(0));
+const ptVerified = () => S.ptVerifiedAt!=null && S.simMin-S.ptVerifiedAt<=60;
+
+/* ===================== MODAL ===================== */
+function openModal(html, opts={}){
+  hideTip();
+  const m=$('#modal'); m.className='modal'+(opts.wide?' wide':''); m.innerHTML=html; $('#scrim').classList.add('on');
+  const f=m.querySelector('[autofocus]'); if(f) setTimeout(()=>{ if(!m.contains(document.activeElement)) f.focus(); },30);
+}
+function closeModal(){ $('#scrim').classList.remove('on'); $('#modal').innerHTML=''; render(); focusScan(); }
+function alertBox(kind, title, body, after){
+  openModal(`<header class="${kind}">${kind==='alert'?'⛔':'⚠️'} ${esc(title)}</header>
+    <div class="mb">${body}</div><footer><button class="btn ${kind==='alert'?'warn':''}" id="ackBtn" autofocus>Acknowledge</button></footer>`);
+  $('#ackBtn').onclick=()=>{ closeModal(); if(after) after(); };
+}
+
+/* ===================== SIGN IN ===================== */
+function signIn(){
+  openModal(`<header>Student Nurse Sign-In</header><div class="mb">
+    <p class="muted" style="margin-top:0">Your name and initials are used to document administrations on the MAR.</p>
+    <div class="fgrid"><label>Full name<input id="siName" autofocus placeholder="e.g., Jordan Lee, SN"></label>
+    <label>Initials<input id="siInit" maxlength="4" placeholder="JL"></label></div></div>
+    <footer><button class="btn" id="siGo">Sign in</button></footer>`);
+  const go=()=>{ const n=$('#siName').value.trim(); if(!n){ $('#siName').focus(); return; }
+    S.user=n; S.initials=($('#siInit').value.trim()||n.split(/\s+/).map(w=>w[0]).join('').slice(0,3)).toUpperCase(); closeModal(); };
+  $('#siGo').onclick=go; $('#siInit').onkeydown=e=>{ if(e.key==='Enter') go(); };
+}
+
+/* ===================== BANNER ===================== */
+function renderBanner(){
+  const ap=latest('aPTT'), inf=S.inf;
+  $('#banner').innerHTML=`
+    <div class="who"><div class="nm">${esc(PT.name)}</div><div class="muted">${PT.age} yrs · ${PT.sex} · DOB ${PT.dob}</div></div>
+    <div class="blk"><span>MRN</span><b class="mono">${PT.mrn}</b></div>
+    <div class="blk"><span>Location</span><b>${PT.room}</b></div>
+    <div class="blk alg"><span>Allergies</span><b>${esc(PT.allergies)}</b></div>
+    <div class="blk"><span>Code status</span><b>${PT.code}</b></div>
+    <div class="blk"><span>Dosing weight</span><b>${W} kg</b><span>measured 07:15 · Ht ${PT.heightCm} cm</span></div>
+    <div class="blk"><span>Attending</span><b>${PT.attending}</b></div>
+    <div class="blk"><span>Problem</span><b>${esc(PT.dx)}</b></div>
+    <div class="blk"><span><span class="badge b-high">HIGH ALERT</span> Heparin infusion</span><b>${inf.status}${inf.rate!=null&&inf.status==='Running'?' · '+fmtN(inf.rate)+' mL/hr':''}</b><span>Last PTT: ${ap?ap.val+' sec @ '+hm(ap.t):'—'}</span></div>`;
+}
+
+/* ===================== ORDERS ===================== */
+function renderOrders(){
+  const medRow=o=>`<tr class="${o.status==='Discontinued'?'dc':''}">
+    <td>${o.hi?'<span class="badge b-high">HIGH ALERT</span><br>':''}<span class="ordname">${esc(o.name)}</span>
+      <div class="ordsub">${esc(o.dose)}</div>${o.calc?`<div class="ordsub">${esc(o.calc)}</div>`:''}
+      <div class="ordsub">Dispense: ${esc(o.product)}</div>${o.dc?`<div class="ordsub" style="color:var(--red)">${esc(o.dc)}</div>`:''}</td>
+    <td>${esc(o.route)}</td><td>${esc(o.freq)}</td><td>${esc(o.start)}</td>
+    <td class="nostrike"><span class="badge ${o.status==='Active'?'b-act':'b-dc'}">${o.status}</span></td></tr>`;
+  const labs=S.labs.slice().reverse().map(l=>{
+    let flag=''; if(l.test==='aPTT'){ if(l.val>35) flag='H'; if(l.val<25) flag='L'; }
+    if(l.test==='Platelets'&&l.val<150) flag='L'; if(l.test==='Hemoglobin'&&l.val<13.5) flag='L';
+    return `<tr><td>${stamp(l.t)}</td><td>${l.test}</td><td class="${flag==='H'?'lab-h':flag==='L'?'lab-l':''}">${l.val} ${flag}</td><td>${l.unit}</td><td>${l.ref}</td></tr>`;}).join('');
+  const na=nextAPTT();
+  $('#p-orders').innerHTML=`<div class="opad">
+    <div class="card"><h3>Order set: Heparin Weight-Based Protocol — VTE / PE <span class="badge b-act">Active</span></h3>
+      <div class="body" style="padding:0"><table class="ot">
+        <thead><tr><th>Medication</th><th>Route</th><th>Frequency</th><th>Start</th><th>Status</th></tr></thead>
+        <tbody>${ORDERS.filter(o=>o.group==='heparin').map(medRow).join('')}</tbody></table></div></div>
+    <div class="card"><h3>PTT-Adjusted Heparin Therapy Nomogram (VTE) — dosing weight ${W} kg</h3><div class="body">
+      <table class="ot nomo"><thead><tr><th>aPTT (sec)</th><th>Rebolus</th><th>Hold</th><th>Rate change</th><th>Next aPTT</th></tr></thead><tbody>
+      ${NOMO.map(n=>`<tr><td>${n.range}</td><td>${n.bolus?n.bolus+' units/kg':'—'}</td><td>${n.hold?'1 hour':'—'}</td><td>${n.chg>0?'+':''}${n.chg?n.chg+' units/kg/hr':'No change'}</td><td>6 hr</td></tr>`).join('')}
+      </tbody></table>
+      <p class="muted" style="margin-bottom:0">Therapeutic goal: aPTT 46 – 70 sec. Round rebolus doses to the nearest 100 units and infusion doses to the nearest 10 units/hr. Infusion concentration: 25,000 units/250 mL = 100 units/mL.
+      ${na!=null?`<br><b style="color:var(--navy)">Next aPTT due: ${stamp(na)}</b>`:''}</p></div></div>
+    <div class="card"><h3>Other active medications</h3><div class="body" style="padding:0"><table class="ot">
+      <thead><tr><th>Medication</th><th>Route</th><th>Frequency</th><th>Start</th><th>Status</th></tr></thead>
+      <tbody>${ORDERS.filter(o=>o.group==='other').map(medRow).join('')}</tbody></table></div></div>
+    <div class="card"><h3>Lab, nursing &amp; other orders</h3><div class="body" style="padding:0"><table class="ot">
+      <thead><tr><th style="width:90px">Type</th><th>Order</th><th style="width:90px">Status</th></tr></thead>
+      <tbody>${NONMED.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td><span class="badge ${r[2]==='Active'?'b-act':'b-dc'}">${r[2]}</span></td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>Results review</h3><div class="body" style="padding:0"><table class="ot">
+      <thead><tr><th>Collected</th><th>Test</th><th>Result</th><th>Units</th><th>Reference</th></tr></thead><tbody>${labs}</tbody></table></div></div></div>`;
+}
+
+/* ===================== MAR (time view) ===================== */
+function marColumns(){
+  const times=new Set();
+  S.admins.forEach(a=>{ if(S.showRate || !a.isRate) times.add(a.t); });
+  S.labs.filter(l=>l.test==='aPTT').forEach(l=>times.add(l.t));
+  return [{cur:true,t:S.simMin}, ...[...times].sort((a,b)=>b-a).map(t=>({t}))];
+}
+function adminsAt(o,t){ return S.admins.filter(a=>a.orderId===o.id && a.t===t && (S.showRate||!a.isRate)); }
+function nextDue(o){
+  const ds=dayOf(S.simMin)*1440;
+  const cands=o.sched.flatMap(t=>[ds-1440+t,ds+t,ds+1440+t]).filter(tm=>tm>=0 && !S.admins.some(a=>a.orderId===o.id&&a.schedFor===tm));
+  const over=cands.filter(tm=>tm<=S.simMin).sort((a,b)=>a-b);
+  if(over.length) return over[0];
+  return cands.filter(tm=>tm>S.simMin).sort((a,b)=>a-b)[0];
+}
+function dueChip(tm,label){
+  const cls = S.simMin>tm+60?'c-over':S.simMin>=tm-60?'c-due':'c-fut';
+  return `<span class="chip ${cls}">${cls==='c-over'?'Overdue':cls==='c-due'?'Due':'Next'} ${dayOf(tm)!==dayOf(S.simMin)?dmy(tm).slice(0,6)+' ':''}${hm(tm)}</span>${label?`<br><small>${label}</small>`:''}`;
+}
+function lastGiven(o){ const a=S.admins.filter(x=>x.orderId===o.id && x.action!=='Not Given'); return a[a.length-1]; }
+function pendingCell(o){
+  if(o.status!=='Active') return '';
+  const ovr=`<br><button class="link" data-ovr="${o.id}">Unable to scan?</button>`;
+  const lg=lastGiven(o);
+  const lastTxt=lg?`<b>${esc(lg.cell)}</b><br><small>Last given:<br>${stamp(lg.t)}</small>`:'';
+  if(o.kind==='infusion'){
+    const inf=S.inf, ap=aPTTsinceChange();
+    if(inf.status==='Not started') return dueChip(8*60,'Begin Bag')+ovr;
+    if(inf.status==='On hold') return `<span class="chip c-over">ON HOLD</span><br><small>${S.simMin>=inf.holdUntil?'<b>Restart due now</b>':'Restart '+hm(inf.holdUntil)} at ${fmtN(inf.pendingRestart.rate)} mL/h</small>`+ovr;
+    return `<span class="chip c-run">Infusing</span><br><b>${fmtN(inf.rate)} mL/h</b><br><small>${fmtN(inf.uh)} unit/h</small>${ap?`<br><span class="chip c-due">New PTT ${ap.val} — review</span>`:`<br><small>Next PTT ${hm(nextAPTT())}</small>`}`+ovr;
+  }
+  if(o.kind==='bolus'){ if(lg) return lastTxt; return dueChip(8*60)+ovr; }
+  if(o.kind==='rebolus'){ if(S.rebolusDue) return `<span class="chip c-due">Due now</span><br><small>per nomogram</small>`+ovr; return (lastTxt||'<small class="muted">PRN</small>')+ovr; }
+  if(o.prn) return (lastTxt||'<small class="muted">PRN — none given</small>')+ovr;
+  const nd=nextDue(o); return (nd!=null?dueChip(nd):'')+ovr;
+}
+function renderMAR(){
+  const cols=marColumns();
+  const pv=ptVerified();
+  const head=`<tr><th class="medcol">Medications</th>${cols.map(c=>`<th class="${c.cur?'cur':''}">${dmy(c.t)}<br>${hm(c.t)} ${c.cur?'(now)':''}</th>`).join('')}</tr>`;
+  let body='';
+  CATS.forEach(c=>{
+    if(!S.filters[c.k]) return;
+    const os=ORDERS.filter(o=>catOf(o)===c.k);
+    if(!os.length) return;
+    body+=`<tr class="band" style="background:${c.band}"><td class="medcol">${c.label}</td>${cols.map(()=>'<td></td>').join('')}</tr>`;
+    os.forEach(o=>{
+      body+=`<tr class="mrow" style="background:${c.row}"><td class="medcol" data-tip="${o.id}">
+        <div class="icons"><span class="ico">℞</span>${o.hi?'<span class="ico ha" title="High-alert medication">!</span>':''}${o.status!=='Active'?'<span class="ico dc">DC</span>':''}</div>
+        <div class="mname">${esc(o.mar)}</div><div class="msig">${esc(sigOf(o))}</div>${o.prnReason?`<div class="msig">PRN Reason: ${esc(o.prnReason)}</div>`:''}</td>
+        ${cols.map(col=>{
+          if(col.cur) return `<td class="tc cur">${pendingCell(o)}</td>`;
+          const as=adminsAt(o,col.t);
+          return `<td class="tc">${as.map(a=>`<div class="cv click" data-adm="${S.admins.indexOf(a)}"><b>${esc(a.cell)}</b><small>${esc(a.action)}${a.override?' <span class="ovr">⚠ override</span>':''}</small></div>`).join('')}</td>`;
+        }).join('')}</tr>`;
+      if(o.subsLabel) body+=`<tr class="srow lbl"><td class="medcol">${o.subsLabel}</td>${cols.map(col=>`<td class="tc ${col.cur?'cur':''}"></td>`).join('')}</tr>`;
+      o.subs.forEach((s,i)=>{
+        body+=`<tr class="srow"><td class="medcol">${esc(s)}</td>${cols.map(col=>{
+          if(s==='PTT'){
+            if(col.cur){ const l=latest('aPTT'); return `<td class="tc cur">${l?`<small>Last: ${l.val} sec<br>${hm(l.t)}</small>`:''}</td>`; }
+            const l=S.labs.find(x=>x.test==='aPTT'&&x.t===col.t); return `<td class="tc">${l?`<b style="color:${l.val>35?'var(--red)':'inherit'}">${l.val} sec</b>`:''}</td>`;
+          }
+          if(col.cur) return `<td class="tc cur"></td>`;
+          return `<td class="tc">${adminsAt(o,col.t).map(a=>esc((a.sub&&a.sub[i])||'')).join('<br>')}</td>`;
+        }).join('')}</tr>`;
+      });
+    });
+  });
+  if(!body) body=`<tr><td class="medcol muted" style="background:#fff">No categories selected.</td>${cols.map(()=>'<td class="tc"></td>').join('')}</tr>`;
+  const counts=Object.fromEntries(CATS.map(c=>[c.k,ORDERS.filter(o=>catOf(o)===c.k).length]));
+  $('#p-mar').innerHTML=`
+    <div class="mtool">
+      <select><option>All Medications (System)</option></select>
+      <div class="datebar"><button class="nav" disabled>◀</button><button class="nav" disabled>▶</button><span class="d">${longDate(S.simMin)}</span></div>
+    </div>
+    <div class="scanrow">
+      <b>Scan</b><input id="scanIn" placeholder="Scan wristband or medication…" autocomplete="off">
+      <button class="btn sm" id="scanGo">Enter</button>
+      <div class="pv ${pv?'yes':'no'}">${pv?`✔ ${esc(PT.name)} verified by wristband scan at ${hm(S.ptVerifiedAt)}`:'⚠ Scan patient wristband to begin medication administration'}</div>
+      ${pv?'<button class="link" id="endSess">End patient session</button>':''}
+    </div>
+    <div class="marwrap">
+      <aside class="mside">
+        <label class="rc"><input type="checkbox" id="showRate" ${S.showRate?'checked':''}> Show All Rate Change Documents</label>
+        <div class="vh">Time View</div>
+        ${CATS.map(c=>`<label class="cat ${counts[c.k]?'':'empty'}" style="background:${c.band}"><input type="checkbox" data-cat="${c.k}" ${S.filters[c.k]?'checked':''}> ${c.label}</label>`).join('')}
+        <div class="fill"></div>
+        <div class="views"><div>Therapeutic Class View</div><div>Route View</div><div>Plan View</div><div>Taper View</div></div>
+      </aside>
+      <div class="gridwrap"><table class="mar"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+    </div>`;
+  $('#scanIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); const v=e.target.value; e.target.value=''; handleScan(v); } };
+  $('#scanGo').onclick=()=>{ const v=$('#scanIn').value; $('#scanIn').value=''; handleScan(v); };
+  const es=$('#endSess'); if(es) es.onclick=()=>{ S.ptVerifiedAt=null; render(); };
+  $('#showRate').onchange=e=>{ S.showRate=e.target.checked; render(); };
+  document.querySelectorAll('[data-cat]').forEach(b=>b.onchange=()=>{ S.filters[b.dataset.cat]=b.checked; render(); });
+  document.querySelectorAll('[data-ovr]').forEach(b=>b.onclick=()=>overrideFlow(b.dataset.ovr));
+  document.querySelectorAll('[data-adm]').forEach(b=>b.onclick=()=>showAdmin(S.admins[+b.dataset.adm]));
+  document.querySelectorAll('[data-tip]').forEach(td=>{
+    td.onmouseenter=e=>showTip(td.dataset.tip,e); td.onmousemove=e=>moveTip(e); td.onmouseleave=hideTip;
+  });
+}
+/* order-detail hover */
+function tipHTML(o){
+  let h=`<p><b>${esc(o.mar)}</b></p><p>${esc(sigOf(o))}</p><p>Dispense: ${esc(o.product)}</p>`;
+  if(o.calc) h+=`<p>${esc(o.calc)}</p>`;
+  if(o.dc) h+=`<p style="color:var(--red)">${esc(o.dc)}</p>`;
+  if(o.kind==='infusion'){
+    h+=`<p>Start immediately after baseline blood work is collected.<br>Initial dosing: 18 units/kg/hr based on dosing weight ${W} kg.</p>
+    <div class="box"><b>PTT-Adjusted Heparin Therapy Nomogram: THERAPEUTIC PTT TARGET 46 – 70 sec</b></div>
+    <p>Repeat PTT 6 hours after every rate change until 2 consecutive PTTs are within goal, then daily.</p>
+    <p><b>For PTT of:</b></p>${NOMO.map((n,i)=>i===0?`<div class="box">${n.range} sec — ${n.text}</div>`:`<div>${n.range} sec — ${n.text}</div>`).join('')}
+    <p style="margin-top:6px">Call provider if PTT > 150 sec, platelets < 100,000 or ≥ 50% drop, or any bleeding.</p>`;
+  }
+  return h;
+}
+function showTip(id,e){ if($('#scrim').classList.contains('on')) return; const t=$('#tip'); t.innerHTML=tipHTML(ORDERS.find(o=>o.id===id)); t.style.display='block'; moveTip(e); }
+function moveTip(e){ const t=$('#tip'); if(t.style.display!=='block') return; let x=e.clientX+18, y=e.clientY+12; const r=t.getBoundingClientRect();
+  if(x+r.width>innerWidth-8) x=innerWidth-r.width-8; if(y+r.height>innerHeight-8) y=Math.max(8,innerHeight-r.height-8); t.style.left=x+'px'; t.style.top=y+'px'; }
+function hideTip(){ $('#tip').style.display='none'; }
+function showAdmin(a){
+  openModal(`<header>${esc(a.medName)}</header><div class="mb"><div class="dtl">
+    <div>Action</div><div><b>${esc(a.action)}</b></div>
+    <div>Date / time</div><div>${stamp(a.t)}</div>
+    <div>Documentation</div><div>${esc(a.summary)}</div>
+    <div>Performed by</div><div>${esc(a.by)} (${esc(a.init)})</div>
+    ${a.verifier?`<div>Verified by (2nd RN)</div><div>${esc(a.verifier)}</div>`:''}
+    <div>Scan</div><div>${a.override?'<span class="ovr">OVERRIDE — '+esc(a.overrideReason)+'</span>':'Patient and medication scanned'}</div>
+    ${a.comment?`<div>Comment</div><div>${esc(a.comment)}</div>`:''}</div></div>
+    <footer><button class="btn" id="fC" autofocus>Close</button></footer>`);
+  $('#fC').onclick=closeModal;
+}
+
+function render(){
+  $('#clock').textContent=stamp(S.simMin);
+  $('#userLbl').textContent=S.user?`${S.user} (${S.initials})`:'Not signed in';
+  renderBanner(); renderOrders(); renderMAR(); renderInstr();
+}
+
+/* ===================== SCANNING ===================== */
+function focusScan(){ const s=$('#scanIn'); if(s && $('#p-mar').classList.contains('on') && !$('#scrim').classList.contains('on')) s.focus(); }
+let kb={buf:'',last:0,times:[]};
+document.addEventListener('keydown',e=>{
+  if(e.target && e.target.id==='scanIn') return;
+  const now=performance.now();
+  if(e.key==='Enter'){
+    const fast=kb.buf.length>=4 && kb.times.length>=3 && kb.times.reduce((a,b)=>a+b,0)/kb.times.length<45;
+    if(fast){
+      e.preventDefault(); const code=kb.buf; const el=document.activeElement;
+      if(el && 'value' in el && typeof el.value==='string' && el.value.endsWith(code)) el.value=el.value.slice(0,-code.length);
+      kb={buf:'',last:0,times:[]};
+      if($('#scrim').classList.contains('on')){ toast('Scan ignored — finish or cancel the open window first.'); return; }
+      if(!$('#p-mar').classList.contains('on')) showTab('mar');
+      handleScan(code); return;
+    }
+    kb={buf:'',last:0,times:[]}; return;
+  }
+  if(e.key.length!==1) return;
+  if(now-kb.last>80){ kb.buf=''; kb.times=[]; } else kb.times.push(now-kb.last);
+  kb.buf+=e.key; kb.last=now;
+},true);
+
+function handleScan(raw){
+  const code=String(raw||'').trim().toUpperCase().replace(/^\*|\*$/g,'');
+  if(!code) return;
+  if(!S.user){ signIn(); return; }
+  const item=SCAN[code];
+  if(!item){ alertBox('caution','Barcode not recognized',`<p>The scanned code <span class="mono">${esc(code)}</span> does not match a patient or medication in this system.</p>`); return; }
+  if(item.type==='pt'){
+    if(item.ok){ S.ptVerifiedAt=S.simMin; log('Patient wristband scanned — identity verified'); toast('✔ Patient verified: '+PT.name); render(); focusScan(); }
+    else { S.ptVerifiedAt=null; log('WRONG PATIENT wristband scanned ('+item.name+')');
+      alertBox('alert','Wrong patient',`<p><b>The wristband scanned does not belong to the patient whose chart is open.</b></p>
+        <table class="ot"><tr><th></th><th>Chart open</th><th>Wristband scanned</th></tr>
+        <tr><td>Name</td><td>${PT.name}</td><td><b>${item.name}</b></td></tr>
+        <tr><td>DOB</td><td>${PT.dob}</td><td><b>${item.dob}</b></td></tr>
+        <tr><td>MRN</td><td>${PT.mrn}</td><td><b>${item.mrn}</b></td></tr></table>
+        <p>Similar names and MRNs are a classic patient-identification trap. Use two identifiers every time.</p>`); }
+    return;
+  }
+  if(!ptVerified()){ alertBox('caution','Scan patient first','<p>Scan the patient\'s wristband before scanning medications.</p>'); return; }
+  if(item.wrongPt){ log('Scanned bag labeled for another patient');
+    alertBox('alert','Medication labeled for a different patient',`<p><b>${esc(item.label)}</b></p><p>This bag was dispensed for <b>Whitaker, Harriet M. (MRN 1048527)</b>, not ${PT.name} (MRN ${PT.mrn}). Do not hang. Return it to pharmacy.</p>`); return; }
+  if(item.msg){ log('Scanned non-ordered product: '+item.label); alertBox('alert','No matching order',`<p><b>${esc(item.label)}</b></p><p>${esc(item.msg)}</p>`); return; }
+  const matches=ORDERS.filter(o=>o.codes.includes(code));
+  const active=matches.filter(o=>o.status==='Active');
+  if(!active.length){
+    const dc=matches.find(o=>o.status==='Discontinued');
+    log('Scanned product for discontinued order: '+item.label);
+    alertBox('alert','Order discontinued',`<p><b>${esc(item.label)}</b></p><p>The only order linked to this product, <b>${esc(dc.name)} — ${esc(dc.dose)}</b>, has been <b>discontinued</b>.</p><p class="muted">${esc(dc.dc)}</p><p>Note that 5,000 units/mL is also not the product dispensed for the IV bolus (1,000 units/mL).</p>`); return;
+  }
+  startAdmin(code, active, false);
+}
+function startAdmin(code, active, override, reason){
+  let o=active[0];
+  if(o.id==='hepBolus'||o.id==='hepRebolus'){
+    const bolusGiven=S.admins.some(a=>a.orderId==='hepBolus' && a.action!=='Not Given');
+    if(override && o.id==='hepBolus' && bolusGiven){ alertBox('caution','Initial bolus already given','<p>The one-time initial bolus has already been documented. Rebolus only when the nomogram calls for it.</p>'); return; }
+    if(!override) o = bolusGiven ? ORDERS.find(x=>x.id==='hepRebolus') : ORDERS.find(x=>x.id==='hepBolus');
+    if(o.id==='hepRebolus' && !S.rebolusDue){ alertBox('caution','No rebolus currently due','<p>Rebolus is given only when the latest aPTT and the nomogram call for it, and only after you document the rate change. No rebolus is pending.</p>'); return; }
+  }
+  const ctx={override:!!override, reason:reason||''};
+  if(o.kind==='bolus'||o.kind==='rebolus') return bolusForm(o,ctx,'Given');
+  if(o.kind==='infusion'){
+    const inf=S.inf; const act=inf.status==='Not started'?'Begin Bag':inf.status==='On hold'?'Restart':'Rate Change';
+    return infusionForm(o,ctx,act);
+  }
+  return stdForm(o,ctx,'Given');
+}
+function overrideFlow(id){
+  if(!S.user){ signIn(); return; }
+  const o=ORDERS.find(x=>x.id===id);
+  openModal(`<header class="caution">⚠️ Barcode scan override</header><div class="mb">
+    <p>You are documenting <b>${esc(o.name)}</b> without scanning. Overrides are reviewed by pharmacy and nursing leadership.</p>
+    <div class="aw-fields" style="padding:0"><label class="s3">Reason<select id="ovR"><option value="">— select —</option>
+      <option>Wristband will not scan</option><option>Medication barcode damaged / unreadable</option><option>Scanner not working</option><option>Emergency</option><option>Other</option></select></label>
+    <label class="chk s3"><input type="checkbox" id="ovPt"> I have verified patient identity using two identifiers (name and DOB) against the wristband.</label></div>
+    <div id="ovFb"></div></div>
+    <footer><button class="btn sec" id="ovC">Cancel</button><button class="btn" id="ovGo">Continue</button></footer>`);
+  $('#ovC').onclick=closeModal;
+  $('#ovGo').onclick=()=>{ const r=$('#ovR').value; if(!r||!$('#ovPt').checked){ $('#ovFb').innerHTML='<div class="fb bad">Select a reason and confirm two-identifier verification.</div>'; return; }
+    log('Scan override for '+o.name+' — '+r); startAdmin(o.codes[0],[o],true,r); };
+}
+
+/* ===================== ADMINISTRATION WINDOW ===================== */
+function awShell(o, ctx, cfg){
+  const info=[
+    ['Product', o.product], o.instr?['Instructions', o.instr]:null, ['Ordered dose', o.dose], o.calc?['Dosing', o.calc]:null,
+    ['Dispense location', o.disp], ['Frequency', o.freq], ['Route', o.route], ['Order start', o.start],
+    o.prnReason?['PRN reasons', o.prnReason]:null, o.hi?['Alert','HIGH-ALERT MEDICATION']:null, ['References','Drug reference (training)']
+  ].filter(Boolean);
+  const verifier = o.hi && cfg.needsVerify ? `
+      <label class="s2">Verifying RN (independent double check)<input id="fVer" placeholder="Second RN name"></label>
+      <label class="chk s3"><input type="checkbox" id="fDC"> Independent double check completed: patient, order, dosing weight, concentration, calculation, and pump programming verified separately by both RNs.</label>`:'';
+  return `
+    <div class="aw-head"><span class="aw-name">${esc(o.name)}</span><span class="aw-sig">Dose: ${esc(o.dose)} : ${esc(o.route)} : ${esc(o.freq)}</span></div>
+    ${ctx.override?`<div class="aw-ovr">⚠ Scan override — ${esc(ctx.reason)}</div>`:''}
+    <div class="aw-grid">
+      <div class="aw-left"><div class="aw-lh">Order Information</div><dl>${info.map(([k,v])=>`<dt>${esc(k)}:</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        ${o.kind==='infusion'||o.kind==='rebolus'?`<div style="margin-top:10px" class="muted">Hover the order on the MAR or open the Orders tab to review the nomogram.</div>`:''}</div>
+      <div class="aw-right">
+        <div class="aw-sec"><div class="aw-sh">Administration Details</div><div class="aw-fields">
+          <label>Action<select id="fAct">${cfg.actions.map(a=>`<option ${a===cfg.action?'selected':''}>${a}</option>`).join('')}</select></label>
+          <label>Date<input readonly value="${mdy(S.simMin)}"></label>
+          <label>Time<input readonly value="${hm(S.simMin)}"></label>
+          ${cfg.details}
+          ${verifier}
+          <label class="s3">Comment<input id="fCmt"></label>
+        </div></div>
+        ${cfg.flow!==null?`<div class="aw-sec"><div class="aw-sh">Associated Flowsheet Rows</div>
+          <div class="aw-ftop"><span>Time taken: <b>${mdy(S.simMin)} ${hm(S.simMin)}</b></span><span>👤 Responsible: <b>${esc(S.user)}</b></span></div>
+          <div class="aw-fields">${cfg.flow||'<label class="chk s3"><input type="checkbox" checked disabled> If no new assessment is needed, check the box to link flowsheet rows to the previous assessment.</label>'}</div></div>`:''}
+        ${cfg.info?`<div class="aw-info">${cfg.info}</div>`:''}
+        <div id="fFb"></div>
+      </div>
+    </div>
+    <footer><button class="btn sec" id="fC">✖ Cancel</button><button class="btn" id="fGo">✔ Accept</button></footer>`;
+}
+const SITES=['','R forearm PIV 20g','L antecubital PIV 18g'];
+const siteSel = () => `<label>Site<select id="fSite">${SITES.map(s=>`<option value="${s}">${s||'— select —'}</option>`).join('')}</select></label>`;
+const bleedSel = () => `<label class="s2">Bleeding assessment<select id="fBleed"><option value="">— select —</option><option>No signs of bleeding</option><option>Bleeding noted — provider notified</option></select></label>`;
+const notGivenDetails = () => `<label class="s2">Reason not given<select id="fNG"><option value="">— select —</option><option>Patient refused</option><option>Held — provider order</option><option>Patient off unit</option><option>NPO</option><option>Medication unavailable</option></select></label>`;
+const HA_INFO = `<b>High-alert medication.</b> An independent double check by a second RN is required. Verify patient, dosing weight (${W} kg), concentration, dose, and pump programming. Remember to assess for bleeding.`;
+
+function checkNum(label, val, expected, tol, hint){
+  const v=parseFloat(String(val).replace(/,/g,''));
+  return {label, ok:!isNaN(v) && Math.abs(v-expected)<=tol+1e-9, entered:isNaN(v)?'(blank)':v, expected, hint};
+}
+function readVerifier(errs){
+  const v=$('#fVer').value.trim(), dc=$('#fDC').checked;
+  if(!v) errs.push('Enter the name of the verifying RN who performed the independent double check.');
+  if(!dc) errs.push('Confirm the independent double check was completed.');
+  return v;
+}
+function finishForm(checks, errs, commit){
+  const fb=$('#fFb');
+  if(errs.length){ fb.innerHTML=`<div class="fb bad"><ul>${errs.map(e=>`<li>${esc(e)}</li>`).join('')}</ul></div>`; return; }
+  const bad=checks.filter(c=>!c.ok);
+  if(bad.length && S.feedback && !fb.dataset.warned){
+    fb.innerHTML=`<div class="fb bad"><b>Recheck before accepting:</b><ul>${bad.map(c=>`<li>${esc(c.label)}: you entered ${esc(c.entered)}. ${c.hint?esc(c.hint):''}</li>`).join('')}</ul>
+      <div style="margin-top:4px">Correct the values, or press <b>Accept</b> again to document as entered.</div></div>`;
+    fb.dataset.warned='1'; return;
+  }
+  commit();
+}
+function recordAdmin(o, ctx, f){
+  const a=Object.assign({orderId:o.id, medName:o.name, t:S.simMin, by:S.user, init:S.initials, override:ctx.override, overrideReason:ctx.reason,
+    comment:($('#fCmt')||{}).value||'', checks:[], allOk:true}, f);
+  a.allOk=a.checks.every(c=>c.ok);
+  S.admins.push(a); log(`Documented ${o.name}: ${a.action} — ${a.summary}${a.allOk?'':' [VALUES DID NOT MATCH EXPECTED]'}`);
+  return a;
+}
+function notGivenCommit(o, ctx, schedFor){
+  const errs=[]; const r=$('#fNG').value; if(!r) errs.push('Select the reason the medication was not given.');
+  finishForm([],errs,()=>{ recordAdmin(o,ctx,{action:'Not Given', cell:'Not Given', summary:'Not given — '+r, sub:[], schedFor}); closeModal(); toast('Documented: not given'); });
+}
+
+function bolusForm(o, ctx, action){
+  const re=o.kind==='rebolus';
+  const ukg=re?S.rebolusDue.ukg:80, expU=re?S.rebolusDue.units:r100(80*W), expV=expU/1000;
+  const given=action==='Given';
+  openModal(awShell(o,ctx,{actions:['Given','Not Given'], action, needsVerify:given,
+    details: given?`
+      <label>Route<select id="fRt"><option>IV push</option><option>Subcutaneous</option><option>IM</option></select></label>
+      ${siteSel()}
+      <label>Dose ordered<div class="iu"><input id="fUkg" inputmode="decimal" autofocus><span>unit/kg</span></div></label>
+      <label>Dose<div class="iu"><input id="fU" inputmode="decimal"><span>unit</span></div></label>
+      <label>Volume<div class="iu"><input id="fV" inputmode="decimal"><span>mL</span></div></label>`
+      : notGivenDetails(),
+    flow: given?bleedSel():null,
+    info: given?(re?`<b>Pending per nomogram:</b> ${esc(S.rebolusDue.reason)}.<br>`:'')+HA_INFO+`<br>Product scanned: heparin <b>1,000 units/mL</b>, 10 mL vial.`:''
+  }),{wide:true});
+  $('#fAct').onchange=e=>bolusForm(o,ctx,e.target.value);
+  $('#fC').onclick=closeModal;
+  $('#fGo').onclick=()=>{
+    if(!given) return notGivenCommit(o,ctx,re?null:8*60);
+    const errs=[]; const ver=readVerifier(errs);
+    if(!$('#fSite').value) errs.push('Select the site.');
+    if(!$('#fBleed').value) errs.push('Document the bleeding assessment.');
+    const checks=[
+      checkNum('Dose ordered (unit/kg)',$('#fUkg').value,ukg,0,'Check the order / nomogram.'),
+      checkNum('Dose (units)',$('#fU').value,expU,0,`unit/kg × ${W} kg, rounded to nearest 100 units.`),
+      checkNum('Volume (mL)',$('#fV').value,expV,0.05,'Dose ÷ vial concentration (1,000 units/mL).'),
+      {label:'Route', ok:$('#fRt').value==='IV push', entered:$('#fRt').value, expected:'IV push', hint:'Check the ordered route.'}
+    ];
+    finishForm(checks,errs,()=>{
+      const u=$('#fU').value, v=$('#fV').value;
+      recordAdmin(o,ctx,{action:'Given', cell:`${fmtN(u)} unit`, sub:[`${fmtN(u)} unit`], summary:`${fmtN(u)} units (${v} mL) ${$('#fRt').value}, ${$('#fSite').value}; ${$('#fBleed').value}`, checks, verifier:ver, schedFor:re?null:8*60});
+      if(re) S.rebolusDue=null;
+      closeModal(); toast('Documented: '+o.name);
+    });
+  };
+}
+
+function infusionForm(o, ctx, act){
+  const inf=S.inf;
+  const actions = inf.status==='Not started'?['Begin Bag']:inf.status==='On hold'?['Restart']:['Rate Change','New Bag'];
+  if(!actions.includes(act)) act=actions[0];
+  let exp=null, warn='', nomo=null, apt=null;
+  if(act==='Begin Bag'){ const uk=18, uh=r10(uk*W); exp={ukg:uk, uh, rate:uh/100}; }
+  if(act==='New Bag'){ exp={ukg:inf.ukg, uh:inf.uh, rate:inf.rate}; }
+  if(act==='Restart'){ exp=inf.pendingRestart; if(S.simMin<inf.holdUntil) warn=`The nomogram hold runs until <b>${hm(inf.holdUntil)}</b>. Do not restart before then.`; }
+  if(act==='Rate Change'){
+    apt=aPTTsinceChange();
+    if(!apt) warn=`No aPTT has resulted since the last start or rate change (${hm(inf.lastChange)}). The next aPTT is due at <b>${hm(nextAPTT())}</b>. Do not titrate without a new result.`;
+    else { nomo=nomoFor(apt.val); const uk=inf.ukg+nomo.chg, uh=r10(uk*W); exp={ukg:uk, uh, rate:uh/100, bolusU:nomo.bolus?r100(nomo.bolus*W):0, hold:nomo.hold}; }
+  }
+  const cur = inf.rate!=null?`<br>Currently infusing: <b>${fmtN(inf.rate)} mL/h = ${fmtN(inf.uh)} unit/h (${fmtN(inf.ukg)} unit/kg/h)</b>`:'';
+  const newLbl = act==='Rate Change'?'New ':'';
+  const details = warn ? `<div class="aw-warn">${warn}</div>` : `
+      <label>Route<select id="fRt"><option>IV continuous</option><option>IV push</option></select></label>
+      ${siteSel()}
+      <label>Bag concentration<div class="iu"><input id="fConc" inputmode="decimal" autofocus><span>unit/mL</span></div></label>
+      <label>${newLbl}Dose<div class="iu"><input id="fUkg" inputmode="decimal"><span>unit/kg/h</span></div></label>
+      <label>${newLbl}Dose<div class="iu"><input id="fUh" inputmode="decimal"><span>unit/h</span></div></label>
+      <label>${newLbl}Rate<div class="iu"><input id="fRate" inputmode="decimal"><span>mL/h</span></div></label>
+      ${act==='Begin Bag'||act==='New Bag'?`<label>Volume to be infused<div class="iu"><input id="fVtbi" inputmode="decimal"><span>mL</span></div></label>`:''}`;
+  const flow = warn ? '' : (act==='Rate Change'?`
+      <label>PTT result used<div class="iu"><input id="fApt" inputmode="decimal"><span>sec</span></div></label>
+      <label class="s2">Nomogram row<select id="fRow"><option value="">— select —</option>${NOMO.map(n=>`<option value="${n.k}">${n.range}: ${n.text}</option>`).join('')}</select></label>
+      <label>Rebolus required<div class="iu"><input id="fRb" inputmode="decimal" placeholder="0 if none"><span>unit</span></div></label>
+      <label>Hold infusion<select id="fHold"><option value="0">No hold</option><option value="60">Hold 1 hour</option></select></label>
+      <label class="chk"><input type="checkbox" id="fPump"> Pump programming verified</label>
+      ${bleedSel()}`
+    : `<label class="chk s3"><input type="checkbox" id="fPump"> Pump programming verified (drug library, concentration, rate)</label>${bleedSel()}`);
+  openModal(awShell(o,ctx,{actions, action:act, needsVerify:!warn, details, flow,
+    info: HA_INFO + cur + (act==='Rate Change'&&!warn?'<br><i>Find the latest PTT in Orders → Results review (or the PTT row on the MAR) and apply the nomogram.</i>':'')
+  }),{wide:true});
+  $('#fAct').onchange=e=>infusionForm(o,ctx,e.target.value);
+  $('#fC').onclick=closeModal;
+  $('#fGo').onclick=()=>{
+    if(warn){ $('#fFb').innerHTML='<div class="fb bad">This action cannot be documented right now. See the message above.</div>'; return; }
+    const errs=[]; const ver=readVerifier(errs);
+    if(!$('#fSite').value) errs.push('Select the site.');
+    if(!$('#fPump').checked) errs.push('Confirm pump programming was verified.');
+    if(!$('#fBleed').value) errs.push('Document the bleeding assessment.');
+    const checks=[ checkNum('Concentration',$('#fConc').value,100,0,'25,000 units ÷ 250 mL.'),
+      {label:'Route', ok:$('#fRt').value==='IV continuous', entered:$('#fRt').value, expected:'IV continuous', hint:'Check the ordered route.'} ];
+    if(act==='Rate Change'){
+      checks.push(checkNum('PTT used',$('#fApt').value,apt.val,0,'Use the most recent PTT result.'));
+      checks.push({label:'Nomogram row', ok:$('#fRow').value===nomo.k, entered:$('#fRow').selectedOptions[0].text, expected:nomo.range, hint:'Match the PTT to the correct range.'});
+      checks.push(checkNum('Rebolus (units)',$('#fRb').value||0,exp.bolusU,0,exp.bolusU?'Rebolus unit/kg × dosing weight, rounded to nearest 100.':'This PTT range does not call for a rebolus.'));
+      checks.push({label:'Hold', ok:+$('#fHold').value===exp.hold, entered:$('#fHold').selectedOptions[0].text, expected:exp.hold?'Hold 1 hour':'No hold', hint:'Check the nomogram row.'});
+    }
+    if(act==='Begin Bag'||act==='New Bag'){ const vt=parseFloat($('#fVtbi').value); checks.push({label:'VTBI', ok:vt>0&&vt<=250, entered:isNaN(vt)?'(blank)':vt, expected:'≤ 250', hint:'Bag volume is 250 mL.'}); }
+    checks.push(checkNum('Dose (unit/kg/h)',$('#fUkg').value,exp.ukg,0, act==='Rate Change'?'Current unit/kg/h plus or minus the nomogram change.':act==='Begin Bag'?'Check the order.':'The dose does not change with a new bag or restart.'));
+    checks.push(checkNum('Dose (unit/h)',$('#fUh').value,exp.uh,5,`unit/kg/h × ${W} kg, rounded to nearest 10 unit/h.`));
+    checks.push(checkNum('Rate (mL/h)',$('#fRate').value,exp.rate,0.1,'unit/h ÷ 100 unit/mL.'));
+    finishForm(checks,errs,()=>{
+      const ukg=parseFloat($('#fUkg').value), uh=parseFloat(String($('#fUh').value).replace(/,/g,'')), rate=parseFloat($('#fRate').value);
+      let f={action:act, verifier:ver, checks, isRate:false, sub:[`${fmtN(uh)} unit/h`,`${fmtN(rate)} mL/h`]};
+      if(act==='Begin Bag'){ Object.assign(inf,{status:'Running',ukg,uh,rate,lastChange:S.simMin}); f.cell=`${fmtN(rate)} mL/h`; f.schedFor=8*60; f.summary=`Begin bag at ${fmtN(rate)} mL/h = ${fmtN(uh)} unit/h (${fmtN(ukg)} unit/kg/h), ${$('#fSite').value}`; }
+      if(act==='New Bag'){ Object.assign(inf,{ukg,uh,rate}); f.cell=`${fmtN(rate)} mL/h`; f.summary=`New bag hung at ${fmtN(rate)} mL/h = ${fmtN(uh)} unit/h`; }
+      if(act==='Restart'){ Object.assign(inf,{status:'Running',ukg,uh,rate,holdUntil:null,pendingRestart:null,lastChange:S.simMin}); f.cell=`${fmtN(rate)} mL/h`; f.isRate=true; f.summary=`Restarted after hold at ${fmtN(rate)} mL/h = ${fmtN(uh)} unit/h (${fmtN(ukg)} unit/kg/h)`; }
+      if(act==='Rate Change'){
+        const rb=parseFloat($('#fRb').value)||0, hold=+$('#fHold').value, aptv=$('#fApt').value;
+        f.isRate=true;
+        if(hold){ Object.assign(inf,{status:'On hold',holdUntil:S.simMin+hold,pendingRestart:{ukg,uh,rate}}); f.action='Rate Change — Hold'; f.cell='0 mL/h (hold)'; f.sub=['0 unit/h','0 mL/h']; f.summary=`PTT ${aptv} sec → infusion held 1 hour; restart at ${fmtN(rate)} mL/h = ${fmtN(uh)} unit/h (${fmtN(ukg)} unit/kg/h)`; }
+        else { f.cell=`${fmtN(rate)} mL/h`; f.summary=`PTT ${aptv} sec → ${rate===inf.rate?'no change':'rate '+fmtN(inf.rate)+' → '+fmtN(rate)+' mL/h'} = ${fmtN(uh)} unit/h (${fmtN(ukg)} unit/kg/h)`; Object.assign(inf,{ukg,uh,rate}); inf.lastChange=S.simMin; }
+        if(rb>0){ S.rebolusDue={units:rb, ukg:nomo.bolus||Math.round(rb/W), reason:`PTT ${aptv} sec — rebolus ${fmtN(rb)} units`, at:S.simMin}; f.summary+=`; rebolus ${fmtN(rb)} units due per nomogram`; }
+      }
+      recordAdmin(o,ctx,f);
+      closeModal(); toast('Documented: heparin infusion — '+f.action);
+      if(S.rebolusDue && act==='Rate Change') setTimeout(()=>toast('Rebolus now due — scan the 1,000 units/mL vial.'),2700);
+    });
+  };
+}
+
+function stdForm(o, ctx, action){
+  let schedFor=null;
+  if(o.sched.length){ schedFor=nextDue(o);
+    if(schedFor!=null && schedFor-S.simMin>60){ alertBox('caution','Medication not due',`<p><b>${esc(o.name)}</b> is next due at <b>${hm(schedFor)}</b>. Administering more than 60 minutes early is outside the administration window.</p>`); return; } }
+  if(o.id==='apap'){ const last=lastGiven(o); if(last && S.simMin-last.t<360){ alertBox('caution','Too soon',`<p>Acetaminophen was last given at ${hm(last.t)}. The next dose may be given at ${hm(last.t+360)}.</p>`); return; } }
+  const given=action==='Given';
+  openModal(awShell(o,ctx,{actions:['Given','Not Given'], action, needsVerify:false,
+    details: given?`
+      <label>Route<select id="fRt"><option>${o.route}</option>${['Oral','IV','Subcutaneous','IM'].filter(r=>r!==o.route).map(r=>`<option>${r}</option>`).join('')}</select></label>
+      <label>Site<input id="fSiteTxt" ${o.route==='Oral'?'disabled':''}></label>
+      <label>Dose<div class="iu"><input id="fD" inputmode="decimal" autofocus><span>${o.expect.unit}</span></div></label>`
+      : notGivenDetails(),
+    flow: !given?null: o.id==='apap'?`
+      <label>Pain score (0–10)<input id="fPain" inputmode="numeric"></label>
+      <label>Temperature<div class="iu"><input id="fTemp" inputmode="decimal"><span>°C</span></div></label>
+      <label>PRN reason<select id="fPrn"><option value="">— select —</option><option>Mild pain (1–3)</option><option>Temperature > 38.3 °C</option></select></label>`:'',
+    info: o.id==='apap'&&given?'Remember to always document a pain score or temperature for PRN administration, and reassess within 60 minutes. Max acetaminophen 3 g/24 h.':''
+  }),{wide:true});
+  $('#fAct').onchange=e=>stdForm(o,ctx,e.target.value);
+  $('#fC').onclick=closeModal;
+  $('#fGo').onclick=()=>{
+    if(!given) return notGivenCommit(o,ctx,schedFor);
+    const errs=[];
+    if(o.id==='apap'){ if(!$('#fPrn').value) errs.push('Select a PRN reason.'); if($('#fPain').value===''&&$('#fTemp').value==='') errs.push('Document a pain score or temperature.'); }
+    const checks=[checkNum('Dose',$('#fD').value,o.expect.dose,0,'Check the ordered dose.'),
+      {label:'Route', ok:$('#fRt').value===o.route, entered:$('#fRt').value, expected:o.route, hint:'Check the ordered route.'}];
+    finishForm(checks,errs,()=>{
+      const d=$('#fD').value;
+      recordAdmin(o,ctx,{action:'Given', cell:`${d} ${o.expect.unit}`, sub:[`${d} ${o.expect.unit}`], summary:`${d} ${o.expect.unit} ${$('#fRt').value}${o.id==='apap'?` — ${$('#fPrn').value}; pain ${$('#fPain').value||'—'}, temp ${$('#fTemp').value||'—'}`:''}`, checks, schedFor});
+      closeModal(); toast('Documented: '+o.name);
+    });
+  };
+}
+
+/* ===================== INSTRUCTOR ===================== */
+let instrOpen=false;
+function renderInstr(){
+  const p=$('#instr'); if(!instrOpen){ p.classList.remove('on'); return; }
+  p.classList.add('on');
+  const keep=id=>{ const el=document.getElementById(id); return el?el.value:''; };
+  const v1=keep('iVal'), v2=keep('iTest');
+  p.innerHTML=`
+    <div style="background:var(--navy);color:#fff;padding:9px 14px;display:flex;align-items:center"><b style="flex:1">Instructor controls</b><button class="tbtn" id="iClose">Close</button></div>
+    <h4>Simulation clock — ${stamp(S.simMin)}</h4><div class="sec">
+      <div class="row"><button class="btn sm sec" data-adv="15">+15 min</button><button class="btn sm sec" data-adv="60">+1 hr</button><button class="btn sm sec" data-adv="360">+6 hr</button></div>
+      <div class="row"><input id="iTime" type="time" value="${hm(S.simMin)}"><button class="btn sm sec" id="iSetT">Set time</button></div>
+      <div class="muted">The clock also advances in real time.</div></div>
+    <h4>Result a lab</h4><div class="sec">
+      <div class="row"><select id="iTest">${['aPTT','Platelets','Hemoglobin'].map(t=>`<option ${t===v2?'selected':''}>${t}</option>`).join('')}</select>
+        <input id="iVal" inputmode="decimal" style="width:80px" placeholder="value" value="${esc(v1)}"><button class="btn sm" id="iPost">Post result</button></div>
+      <div class="row">Quick aPTT: ${[30,40,58,82,105].map(v=>`<button class="btn sm sec" data-apt="${v}">${v}</button>`).join('')}</div>
+      <div class="muted">Results post at the current sim time. Next aPTT due: ${nextAPTT()!=null?hm(nextAPTT()):'—'}</div></div>
+    <h4>Settings</h4><div class="sec">
+      <label class="row"><input type="checkbox" id="iFb" ${S.feedback?'checked':''}> Coaching feedback on calculation errors</label>
+      <div class="row"><button class="btn sm sec" id="iLabels">Barcode label sheet</button><button class="btn sm warn" id="iReset">Reset scenario</button></div></div>
+    <h4>Simulate a scan (no scanner)</h4><div class="sec">
+      <div class="row"><select id="iScan">${Object.keys(SCAN).map(k=>`<option value="${k}">${k}</option>`).join('')}</select><button class="btn sm sec" id="iScanGo">Scan</button></div></div>
+    <h4>Expected values (answer key)</h4><div class="sec" style="font-size:12px">
+      Initial bolus: 80 × 82 = 6,560 → <b>6,600 units = 6.6 mL</b> of 1,000 units/mL<br>
+      Initial infusion: 18 × 82 = 1,476 → <b>1,480 units/hr = 14.8 mL/hr</b><br>
+      Rebolus 80 units/kg = <b>6,600 units</b>; 40 units/kg = 3,280 → <b>3,300 units</b><br>
+      Current: ${S.inf.ukg!=null?`${fmtN(S.inf.ukg)} units/kg/hr · ${fmtN(S.inf.uh)} units/hr · ${fmtN(S.inf.rate)} mL/hr`:'not started'}</div>
+    <h4>Debrief log</h4><div class="sec">
+      <div class="row"><button class="btn sm sec" id="iCopy">Copy log</button></div>
+      <div style="max-height:260px;overflow:auto;font-size:11.5px">${S.events.slice().reverse().map(e=>`<div style="border-bottom:1px solid #eee;padding:3px 0"><span class="mono">${hm(e.t)}</span> ${esc(e.text)}</div>`).join('')||'<span class="muted">No events yet.</span>'}</div>
+      <div style="height:20px"></div></div>`;
+  $('#iClose').onclick=()=>{ instrOpen=false; renderInstr(); };
+  p.querySelectorAll('[data-adv]').forEach(b=>b.onclick=()=>{ S.simMin+=+b.dataset.adv; render(); });
+  $('#iSetT').onclick=()=>{ const [h,m]=$('#iTime').value.split(':').map(Number); if(isNaN(h))return; let t=dayOf(S.simMin)*1440+h*60+m; if(t<S.simMin) t+=1440; S.simMin=t; render(); };
+  const post=(test,val)=>{ const v=parseFloat(val); if(isNaN(v)) return; S.labs.push({test,val:v,unit:test==='aPTT'?'sec':test==='Platelets'?'×10³/mm³':'g/dL',ref:test==='aPTT'?'25 – 35':test==='Platelets'?'150 – 400':'13.5 – 17.5',t:S.simMin}); log(`Instructor resulted ${test} ${v}`); toast(`${test} ${v} resulted`); render(); };
+  $('#iPost').onclick=()=>post($('#iTest').value,$('#iVal').value);
+  p.querySelectorAll('[data-apt]').forEach(b=>b.onclick=()=>post('aPTT',b.dataset.apt));
+  $('#iFb').onchange=e=>{ S.feedback=e.target.checked; };
+  $('#iReset').onclick=()=>{ S=freshState(); render(); toast('Scenario reset'); };
+  $('#iLabels').onclick=showLabels;
+  $('#iScanGo').onclick=()=>{ showTab('mar'); handleScan($('#iScan').value); };
+  $('#iCopy').onclick=async()=>{
+    const txt=`SimEHR heparin debrief — student: ${S.user||'(not signed in)'}\n`+S.events.map(e=>`${stamp(e.t)}  ${e.text}`).join('\n')+
+      '\n\nADMINISTRATIONS\n'+S.admins.map(a=>`${stamp(a.t)}  ${a.medName} [${a.action}]: ${a.summary} | ${a.allOk?'all values correct':'ERRORS: '+a.checks.filter(c=>!c.ok).map(c=>`${c.label} entered ${c.entered}, expected ${c.expected}`).join('; ')}${a.override?' | OVERRIDE: '+a.overrideReason:''}`).join('\n');
+    try{ await navigator.clipboard.writeText(txt); toast('Debrief log copied'); }catch(e){ openModal(`<header>Debrief log</header><div class="mb"><textarea style="width:100%;height:300px">${esc(txt)}</textarea></div><footer><button class="btn" id="fC">Close</button></footer>`); $('#fC').onclick=closeModal; }
+  };
+}
+
+/* ===================== BARCODES (Code 39) ===================== */
+const C39C="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%";
+const C39E=[20957,29783,23639,30485,20951,29813,23669,20855,29789,23645,29975,23831,30533,22295,30149,24005,21623,29981,23837,22301,30023,23879,30545,22343,30161,24017,21959,30065,23921,22385,29015,18263,29141,17879,29045,18293,17783,29021,18269,17477,17489,17681,20753];
+function c39bits(ch){ return ch==='*'?'100010111011101':C39E[C39C.indexOf(ch)].toString(2); }
+function code39svg(text, h=56, x=2){
+  const bits=['*',...text,'*'].map(c39bits).join('0');
+  const q=12, wpx=(bits.length+q*2)*x; let rects='', i=0;
+  while(i<bits.length){ if(bits[i]==='1'){ let j=i; while(bits[j]==='1') j++; rects+=`<rect x="${(q+i)*x}" y="0" width="${(j-i)*x}" height="${h}"/>`; i=j; } else i++; }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${wpx}" height="${h+16}" viewBox="0 0 ${wpx} ${h+16}"><rect width="100%" height="100%" fill="#fff"/><g fill="#000">${rects}</g><text x="${wpx/2}" y="${h+13}" font-family="monospace" font-size="12" text-anchor="middle">${text}</text></svg>`;
+}
+function showLabels(){
+  const L=[
+    ['band','MRN1048572','WHITAKER, HAROLD J.','DOB 03/14/1958 · M · MRN 1048572 · Okafor, R MD','Correct patient wristband'],
+    ['band','MRN1048527','WHITAKER, HARRIET M.','DOB 09/02/1961 · F · MRN 1048527 · Rm 412-B','Distractor: roommate with similar name/MRN'],
+    ['','HEP25K572','heparin 25,000 units / 250 mL 0.45% NaCl','100 units/mL · Pt: WHITAKER, HAROLD J. MRN 1048572 · HIGH ALERT','Correct infusion bag'],
+    ['','HEP25K527','heparin 25,000 units / 250 mL 0.45% NaCl','100 units/mL · Pt: WHITAKER, HARRIET M. MRN 1048527 · HIGH ALERT','Distractor: bag for the wrong patient'],
+    ['','HEP1000','heparin 1,000 units/mL','10 mL multi-dose vial (10,000 units total)','Correct bolus/rebolus product'],
+    ['','HEP5000','heparin 5,000 units/mL','1 mL vial','Distractor: discontinued SubQ order'],
+    ['','HEPFLUSH10','heparin lock flush 10 units/mL','5 mL syringe','Distractor: look-alike concentration'],
+    ['','ENOX80','enoxaparin 80 mg/0.8 mL','Prefilled syringe','Distractor: not ordered (duplicate anticoagulant)'],
+    ['','PANTO40','pantoprazole 40 mg','EC tablet','Scheduled 0900'],
+    ['','APAP325','acetaminophen 325 mg','Tablet (give 2 for 650 mg)','PRN'],
+    ['','NSFLUSH10','0.9% sodium chloride flush','10 mL prefilled syringe','Scheduled q8h']
+  ];
+  openModal(`<header>Barcode label sheet (instructor)</header><div class="mb">
+    <p class="muted" style="margin-top:0">Most imager scanners will read these directly from a screen. For bedside props, print the PDF label sheet. Barcodes are Code 39 (no check digit). The italic notes are for the instructor.</p>
+    <div class="labels">${L.map(l=>`<div class="lbl ${l[0]}"><div class="t">${esc(l[2])}</div><div class="s">${esc(l[3])}</div>${code39svg(l[1])}<div class="note">${esc(l[4])}</div></div>`).join('')}</div></div>
+    <footer><button class="btn" id="fC">Close</button></footer>`,{wide:true});
+  $('#fC').onclick=closeModal;
+}
+
+/* ===================== TABS / INIT ===================== */
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  $('#p-orders').classList.toggle('on',t==='orders'); $('#p-mar').classList.toggle('on',t==='mar');
+  hideTip(); if(t==='mar') setTimeout(focusScan,30);
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$('#btnInstr').onclick=()=>{ instrOpen=!instrOpen; renderInstr(); };
+setInterval(()=>{ S.simMin+=1; if(!$('#scrim').classList.contains('on')) { const f=document.activeElement&&document.activeElement.id; render(); if(f==='scanIn') focusScan(); } else { $('#clock').textContent=stamp(S.simMin); } },60000);
+render();
+signIn();
+</script>
+</body>
+</html>
