@@ -543,7 +543,7 @@ function tipHTML(o){
     h+=`<p>Start immediately after baseline blood work is collected.<br>Initial dosing: 18 units/kg/hr based on dosing weight ${W} kg.</p>
     <div class="box"><b>PTT-Adjusted Heparin Therapy Nomogram: THERAPEUTIC PTT TARGET 46 – 70 sec</b></div>
     <p>Repeat PTT 6 hours after every rate change until 2 consecutive PTTs are within goal, then daily.</p>
-    <p><b>For PTT of:</b></p>${NOMO.map((n,i)=>i===0?`<div class="box">${n.range} sec — ${n.text}</div>`:`<div>${n.range} sec — ${n.text}</div>`).join('')}
+    <p><b>For PTT of:</b></p>${NOMO.map(n=>`<div>${n.range} sec — ${n.text}</div>`).join('')}
     <p style="margin-top:6px">Call provider if PTT > 150 sec, platelets < 100,000 or ≥ 50% drop, or any bleeding.</p>`;
   }
   return h;
