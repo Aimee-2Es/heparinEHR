@@ -213,11 +213,12 @@ tr.dc td.nostrike{text-decoration:none}
 
 <script>
 /* ===================== DATA ===================== */
-const W = 82; // dosing weight kg
+const W = 85; // dosing weight kg
 const PT = {
-  name:'Whitaker, Harold J.', dob:'03/14/1958', age:68, sex:'Male', mrn:'1048572', room:'4 West – 412-A',
-  heightCm:178, allergies:'Penicillins (rash)', code:'Full Code', attending:'Okafor, Renee MD',
-  dx:'Acute pulmonary embolism (right lower lobe)', iso:'None'
+  name:'Thompson, James', dob:'05/22/1962', age:64, sex:'Male', mrn:'4851062', room:'4 West – 412-A',
+  lb:187, allergies:'No Known Allergies', code:'Full Code', attending:'Okafor, Renee MD',
+  dx:'Deep vein thrombosis (DVT)', iso:'None', iv:'20G PIV, right forearm',
+  vitals:{bp:'132/86', hr:78, rr:16, temp:'98.7 °F', spo2:'97% on room air', t:7*60+10}
 };
 const BASE = new Date(); BASE.setHours(0,0,0,0);
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -226,63 +227,41 @@ const MONL=['January','February','March','April','May','June','July','August','S
 const ORDERS = [
   {id:'hepBolus', kind:'bolus', cat:'unsched', hi:true, status:'Active', group:'heparin',
    name:'heparin (porcine) injection — initial bolus', mar:'heparin (heparin bolus)',
-   sig:'80 unit/kg, IV push, ONCE, drug form: inj, start: {D} 08:00',
-   dose:'80 units/kg IV push × 1', calc:'Dosing weight 82 kg. Round to nearest 100 units. Max bolus 10,000 units.',
+   sig:'80 unit/kg, IV push over 2 minutes, ONCE, drug form: inj, start: {D} 08:00',
+   dose:'80 units/kg IV push over 2 minutes × 1', calc:'Round to nearest 100 units. Max bolus 10,000 units.',
    product:'heparin 1,000 units/mL, 10 mL multi-dose vial', disp:'4W Automated Dispensing Cabinet', route:'IV push', freq:'ONCE', sched:[8*60],
    start:'Today 08:00', codes:['HEP1000'], subs:['heparin','PTT'], unit:'unit'},
   {id:'hepInf', kind:'infusion', cat:'cont', hi:true, status:'Active', group:'heparin',
-   name:'heparin 25,000 units in sodium chloride 0.45% 250 mL infusion (premix)', mar:'heparin additive 25,000 unit + sodium chloride 0.45% premix 250 mL',
+   name:'heparin 25,000 units in dextrose 5% 250 mL infusion (premix)', mar:'heparin additive 25,000 unit + dextrose 5% premix 250 mL',
    sig:'titrate, IV, starting rate: 18 unit/kg/h, titrate instructions: Titrate per Nomogram, start: {D} 08:00, volume (mL): 250',
-   dose:'Initial 18 units/kg/hr IV continuous; titrate per VTE nomogram', calc:'Concentration 100 units/mL. Dosing weight 82 kg. Round to nearest 10 units/hr. Max initial rate 2,000 units/hr.',
-   product:'heparin 25,000 units/250 mL premix bag (pharmacy-labeled)', disp:'Pharmacy', route:'IV continuous', freq:'Continuous', sched:[8*60],
-   start:'Today 08:00', codes:['HEP25K572'], subsLabel:'Administration Information', subs:['heparin','sodium chloride 0.45% premix','PTT'], unit:'unit/h'},
+   dose:'Initial 18 units/kg/hr IV continuous via infusion pump; titrate per nomogram', calc:'Round to nearest 10 units/hr. Max initial rate 2,000 units/hr.',
+   product:'heparin 25,000 units/250 mL D5W premix bag (pharmacy-labeled)', disp:'Pharmacy', route:'IV continuous', freq:'Continuous', sched:[8*60],
+   start:'Today 08:00', codes:['HEP25K062'], subsLabel:'Administration Information', subs:['heparin','dextrose 5% premix','PTT'], unit:'unit/h'},
   {id:'hepRebolus', kind:'rebolus', cat:'prn', hi:true, status:'Active', group:'heparin',
    name:'heparin (porcine) injection — rebolus per nomogram', mar:'heparin (heparin bolus)',
-   sig:'40 or 80 unit/kg, IV push, as directed, PRN other (see comment), drug form: inj, start: {D} 08:00',
+   sig:'40 or 80 unit/kg, IV push over 2 minutes, as directed, PRN other (see comment), drug form: inj, start: {D} 08:00',
    prnReason:'Subsequent IV bolus for PTT less than goal per nomogram',
-   dose:'40 or 80 units/kg IV push PRN per nomogram', calc:'Dosing weight 82 kg. Round to nearest 100 units.',
+   dose:'40 or 80 units/kg IV push over 2 minutes PRN per nomogram', calc:'Round to nearest 100 units.',
    product:'heparin 1,000 units/mL, 10 mL multi-dose vial', disp:'4W Automated Dispensing Cabinet', route:'IV push', freq:'PRN per aPTT', sched:[],
-   start:'Today 08:00', codes:['HEP1000'], subs:['heparin','PTT'], unit:'unit', prn:true},
-  {id:'hepSQ', kind:'std', cat:'sched', hi:true, status:'Discontinued', group:'heparin',
-   name:'heparin (porcine) injection 5,000 units', mar:'heparin',
-   sig:'5,000 unit, subcut, q8h, drug form: inj, start: {D} 06:30, stop: {D} 07:40',
-   dose:'5,000 units subcutaneous every 8 hours (VTE prophylaxis)', calc:'',
-   product:'heparin 5,000 units/mL, 1 mL vial', disp:'4W Automated Dispensing Cabinet', route:'Subcutaneous', freq:'q8h', sched:[6*60,14*60,22*60],
-   start:'Today 06:30', dc:'D/C today 07:40 by Okafor, Renee MD — therapeutic anticoagulation ordered', codes:['HEP5000'], subs:['heparin'], unit:'unit'},
-  {id:'panto', kind:'std', cat:'sched', status:'Active', group:'other',
-   name:'pantoprazole (PROTONIX) EC tablet 40 mg', mar:'pantoprazole',
-   sig:'40 mg, PO, daily, drug form: tab, start: {D} 09:00',
-   dose:'40 mg by mouth daily before breakfast', calc:'', instr:'Swallow whole. Do not crush or chew.',
-   product:'pantoprazole 40 mg EC tablet', disp:'4W Automated Dispensing Cabinet', route:'Oral', freq:'Daily 0900', sched:[9*60], start:'Today 09:00', codes:['PANTO40'], subs:['pantoprazole'], expect:{dose:40,unit:'mg'}},
-  {id:'apap', kind:'std', cat:'prn', status:'Active', group:'other', prn:true,
-   name:'acetaminophen (TYLENOL) tablet 650 mg', mar:'acetaminophen',
-   sig:'650 mg, PO, q6h, PRN mild pain or temp > 38.3 °C, drug form: tab, start: {D} 06:30. Maximum 3 g/24 h',
-   prnReason:'Mild pain (1–3) or temperature > 38.3 °C',
-   dose:'650 mg by mouth every 6 hours PRN mild pain or temp > 38.3 °C. Max 3 g/day.', calc:'', instr:'Ordered admin dose: 2 tablets (2 × 325 mg).',
-   product:'acetaminophen 325 mg tablet', disp:'4W Automated Dispensing Cabinet', route:'Oral', freq:'q6h PRN', sched:[], start:'Today 06:30', codes:['APAP325'], subs:['acetaminophen'], expect:{dose:650,unit:'mg'}},
-  {id:'flush', kind:'std', cat:'sched', status:'Active', group:'other',
-   name:'sodium chloride 0.9% flush 10 mL', mar:'sodium chloride 0.9% flush',
-   sig:'10 mL, IV, q8h and PRN line care, start: {D} 06:00',
-   dose:'10 mL IV every 8 hours and PRN line care', calc:'',
-   product:'0.9% NaCl 10 mL prefilled syringe', disp:'4W Supply', route:'IV', freq:'q8h + PRN', sched:[6*60,14*60,22*60], start:'Today 06:00', codes:['NSFLUSH10'], subs:['sodium chloride 0.9%'], expect:{dose:10,unit:'mL'}}
+   start:'Today 08:00', codes:['HEP1000'], subs:['heparin','PTT'], unit:'unit', prn:true}
 ];
 const NONMED = [
-  ['Lab','aPTT — 6 hours after initial bolus/infusion start and 6 hours after every rate change. When 2 consecutive results are therapeutic, then daily at 0500.','Active'],
-  ['Lab','CBC with platelets — baseline, then daily at 0500 while on heparin.','Active'],
-  ['Lab','PT/INR — baseline.','Completed'],
-  ['Nursing','Independent double check by 2 RNs required for bolus, infusion start, every rate change, and bag change (high-alert medication). Verify patient, dosing weight, concentration, dose, rate, and pump programming.','Active'],
+  ['Lab','aPTT — recheck 6 hours after infusion start and 6 hours after every rate change; adjust per protocol.','Active'],
+  ['Lab','CBC with platelets — baseline (resulted), then daily at 0500 while on heparin.','Active'],
+  ['Nursing','Administer heparin infusion through a dedicated IV line via infusion pump.','Active'],
+  ['Nursing','Independent double check by 2 RNs required for bolus, infusion start, every rate change, and bag change (high-alert medication). Verify patient, weight, concentration, dose, rate, and pump programming.','Active'],
   ['Nursing','Bleeding precautions. Assess for bleeding (gums, urine, stool, IV sites, neuro changes) every 4 hours.','Active'],
   ['Nursing','No IM injections while on heparin infusion.','Active'],
-  ['Notify','Notify provider: aPTT > 150 sec; platelet count < 100,000/mm³ or drop ≥ 50% from baseline; any bleeding; infusion held > 1 hour for any reason other than nomogram.','Active'],
-  ['Diet','Regular diet.','Active'],
+  ['Notify','Notify provider: aPTT > 150 sec; platelet count < 100,000/mm³ or drop ≥ 50% from baseline; any bleeding.','Active'],
+  ['Vitals','Vital signs every 4 hours.','Active'],
   ['Activity','Up with assistance as tolerated.','Active']
 ];
+const GOAL = '65 – 105';
 const NOMO = [
-  {k:'A', range:'< 35', lo:-Infinity, hi:34.999, bolus:80, hold:0, chg:+4, text:'Rebolus 80 units/kg; increase rate by 4 units/kg/hr'},
-  {k:'B', range:'35 – 45', lo:35, hi:45.999, bolus:40, hold:0, chg:+2, text:'Rebolus 40 units/kg; increase rate by 2 units/kg/hr'},
-  {k:'C', range:'46 – 70 (therapeutic)', lo:46, hi:70.999, bolus:0, hold:0, chg:0, text:'No change'},
-  {k:'D', range:'71 – 90', lo:71, hi:90.999, bolus:0, hold:0, chg:-2, text:'Decrease rate by 2 units/kg/hr'},
-  {k:'E', range:'> 90', lo:91, hi:Infinity, bolus:0, hold:60, chg:-3, text:'Hold infusion 1 hour; then decrease rate by 3 units/kg/hr'}
+  {k:'A', range:'< 50', lo:-Infinity, hi:49.999, bolus:80, hold:0, chg:+4, text:'Rebolus 80 units/kg; increase rate by 4 units/kg/hr'},
+  {k:'B', range:'50 – 64', lo:50, hi:64.999, bolus:40, hold:0, chg:+2, text:'Rebolus 40 units/kg; increase rate by 2 units/kg/hr'},
+  {k:'C', range:'65 – 105 (therapeutic)', lo:65, hi:105.999, bolus:0, hold:0, chg:0, text:'No change'},
+  {k:'D', range:'> 105', lo:106, hi:Infinity, bolus:0, hold:60, chg:-2, text:'Hold infusion 1 hour; then decrease rate by 2 units/kg/hr'}
 ];
 const CATS = [
   {k:'sched', label:'Scheduled', band:'var(--sched)', row:'var(--schedRow)'},
@@ -297,17 +276,14 @@ const CATS = [
 ];
 const catOf = o => o.status==='Discontinued' ? 'dc-'+o.cat : o.cat;
 const SCAN = {
-  'MRN1048572':{type:'pt', ok:true},
-  'MRN1048527':{type:'pt', ok:false, name:'Whitaker, Harriet M.', dob:'09/02/1961', mrn:'1048527'},
-  'HEP25K572':{type:'med', label:'heparin 25,000 units / 250 mL 0.45% NaCl (100 units/mL) — pharmacy label: WHITAKER, HAROLD J. MRN 1048572'},
-  'HEP25K527':{type:'med', wrongPt:true, label:'heparin 25,000 units / 250 mL 0.45% NaCl — pharmacy label: WHITAKER, HARRIET M. MRN 1048527'},
+  'MRN4851062':{type:'pt', ok:true},
+  'MRN4851026':{type:'pt', ok:false, name:'Thomson, James R.', dob:'11/03/1959', mrn:'4851026'},
+  'HEP25K062':{type:'med', label:'heparin 25,000 units / 250 mL D5W (100 units/mL) — pharmacy label: THOMPSON, JAMES MRN 4851062'},
+  'HEP25K026':{type:'med', wrongPt:true, label:'heparin 25,000 units / 250 mL D5W — pharmacy label: THOMSON, JAMES R. MRN 4851026'},
   'HEP1000':{type:'med', label:'heparin 1,000 units/mL, 10 mL multi-dose vial'},
-  'HEP5000':{type:'med', label:'heparin 5,000 units/mL, 1 mL vial'},
+  'HEP5000':{type:'med', label:'heparin 5,000 units/mL, 1 mL vial', msg:'No active order for this product. Heparin 5,000 units/mL is a subcutaneous-prophylaxis concentration and is NOT the 1,000 units/mL vial dispensed for the IV bolus. Using the wrong concentration changes the volume you draw up fivefold.'},
   'HEPFLUSH10':{type:'med', label:'heparin lock flush 10 units/mL, 5 mL syringe', msg:'No active order for heparin lock flush. Look-alike product: 10 units/mL is NOT the 1,000 units/mL product dispensed for the bolus. Heparin concentration mix-ups are a known source of fatal errors.'},
-  'ENOX80':{type:'med', label:'enoxaparin 80 mg/0.8 mL prefilled syringe', msg:'No active order for enoxaparin. Giving a second anticoagulant with a heparin infusion is a duplicate-therapy error with serious bleeding risk.'},
-  'PANTO40':{type:'med', label:'pantoprazole 40 mg EC tablet'},
-  'APAP325':{type:'med', label:'acetaminophen 325 mg tablet'},
-  'NSFLUSH10':{type:'med', label:'0.9% sodium chloride 10 mL flush syringe'}
+  'ENOX80':{type:'med', label:'enoxaparin 80 mg/0.8 mL prefilled syringe', msg:'No active order for enoxaparin. Giving a second anticoagulant with a heparin infusion is a duplicate-therapy error with serious bleeding risk.'}
 };
 
 /* ===================== STATE ===================== */
@@ -323,12 +299,11 @@ function freshState(){
     inf: {status:'Not started', ukg:null, uh:null, rate:null, holdUntil:null, lastChange:null, pendingRestart:null},
     rebolusDue: null,
     labs: [
-      {test:'aPTT', val:31, unit:'sec', ref:'25 – 35', t:7*60+5},
-      {test:'PT', val:12.1, unit:'sec', ref:'11 – 13.5', t:7*60+5},
-      {test:'INR', val:1.0, unit:'', ref:'0.8 – 1.1', t:7*60+5},
-      {test:'Hemoglobin', val:13.8, unit:'g/dL', ref:'13.5 – 17.5', t:7*60+5},
-      {test:'Platelets', val:245, unit:'×10³/mm³', ref:'150 – 400', t:7*60+5},
-      {test:'Creatinine', val:0.9, unit:'mg/dL', ref:'0.7 – 1.3', t:7*60+5}
+      {test:'aPTT', val:30, unit:'sec', ref:'25 – 35', t:7*60+5},
+      {test:'WBC', val:7.2, unit:'×10³/mm³', ref:'4.5 – 11.0', t:7*60+5},
+      {test:'Hemoglobin', val:14.2, unit:'g/dL', ref:'13.5 – 17.5', t:7*60+5},
+      {test:'Hematocrit', val:42, unit:'%', ref:'41 – 53', t:7*60+5},
+      {test:'Platelets', val:238, unit:'×10³/mm³', ref:'150 – 400', t:7*60+5}
     ],
     admins: [], events: []
   };
@@ -392,7 +367,9 @@ function renderBanner(){
     <div class="blk"><span>Location</span><b>${PT.room}</b></div>
     <div class="blk alg"><span>Allergies</span><b>${esc(PT.allergies)}</b></div>
     <div class="blk"><span>Code status</span><b>${PT.code}</b></div>
-    <div class="blk"><span>Dosing weight</span><b>${W} kg</b><span>measured 07:15 · Ht ${PT.heightCm} cm</span></div>
+    <div class="blk"><span>Weight</span><b>${W} kg (${PT.lb} lb)</b><span>measured 07:15</span></div>
+    <div class="blk"><span>IV access</span><b>${PT.iv}</b></div>
+    <div class="blk"><span>Vitals @ ${hm(PT.vitals.t)}</span><b>BP ${PT.vitals.bp} · HR ${PT.vitals.hr} · RR ${PT.vitals.rr}</b><span>T ${PT.vitals.temp} · SpO₂ ${PT.vitals.spo2}</span></div>
     <div class="blk"><span>Attending</span><b>${PT.attending}</b></div>
     <div class="blk"><span>Problem</span><b>${esc(PT.dx)}</b></div>
     <div class="blk"><span><span class="badge b-high">HIGH ALERT</span> Heparin infusion</span><b>${inf.status}${inf.rate!=null&&inf.status==='Running'?' · '+fmtN(inf.rate)+' mL/hr':''}</b><span>Last PTT: ${ap?ap.val+' sec @ '+hm(ap.t):'—'}</span></div>`;
@@ -408,26 +385,29 @@ function renderOrders(){
     <td class="nostrike"><span class="badge ${o.status==='Active'?'b-act':'b-dc'}">${o.status}</span></td></tr>`;
   const labs=S.labs.slice().reverse().map(l=>{
     let flag=''; if(l.test==='aPTT'){ if(l.val>35) flag='H'; if(l.val<25) flag='L'; }
-    if(l.test==='Platelets'&&l.val<150) flag='L'; if(l.test==='Hemoglobin'&&l.val<13.5) flag='L';
+    if(l.test==='Platelets'&&l.val<150) flag='L'; if(l.test==='Hemoglobin'&&l.val<13.5) flag='L'; if(l.test==='Hematocrit'&&l.val<41) flag='L';
     return `<tr><td>${stamp(l.t)}</td><td>${l.test}</td><td class="${flag==='H'?'lab-h':flag==='L'?'lab-l':''}">${l.val} ${flag}</td><td>${l.unit}</td><td>${l.ref}</td></tr>`;}).join('');
   const na=nextAPTT();
   $('#p-orders').innerHTML=`<div class="opad">
-    <div class="card"><h3>Order set: Heparin Weight-Based Protocol — VTE / PE <span class="badge b-act">Active</span></h3>
+    <div class="card"><h3>Order set: Heparin Weight-Based Protocol — DVT <span class="badge b-act">Active</span></h3>
       <div class="body" style="padding:0"><table class="ot">
         <thead><tr><th>Medication</th><th>Route</th><th>Frequency</th><th>Start</th><th>Status</th></tr></thead>
         <tbody>${ORDERS.filter(o=>o.group==='heparin').map(medRow).join('')}</tbody></table></div></div>
-    <div class="card"><h3>PTT-Adjusted Heparin Therapy Nomogram (VTE) — dosing weight ${W} kg</h3><div class="body">
+    <div class="card"><h3>PTT-Adjusted Heparin Therapy Nomogram</h3><div class="body">
       <table class="ot nomo"><thead><tr><th>aPTT (sec)</th><th>Rebolus</th><th>Hold</th><th>Rate change</th><th>Next aPTT</th></tr></thead><tbody>
       ${NOMO.map(n=>`<tr><td>${n.range}</td><td>${n.bolus?n.bolus+' units/kg':'—'}</td><td>${n.hold?'1 hour':'—'}</td><td>${n.chg>0?'+':''}${n.chg?n.chg+' units/kg/hr':'No change'}</td><td>6 hr</td></tr>`).join('')}
       </tbody></table>
-      <p class="muted" style="margin-bottom:0">Therapeutic goal: aPTT 46 – 70 sec. Round rebolus doses to the nearest 100 units and infusion doses to the nearest 10 units/hr. Infusion concentration: 25,000 units/250 mL = 100 units/mL.
+      <p class="muted" style="margin-bottom:0">Therapeutic goal: aPTT ${GOAL} sec. Round rebolus doses to the nearest 100 units and infusion doses to the nearest 10 units/hr.
       ${na!=null?`<br><b style="color:var(--navy)">Next aPTT due: ${stamp(na)}</b>`:''}</p></div></div>
-    <div class="card"><h3>Other active medications</h3><div class="body" style="padding:0"><table class="ot">
+    ${ORDERS.some(o=>o.group==='other')?`<div class="card"><h3>Other active medications</h3><div class="body" style="padding:0"><table class="ot">
       <thead><tr><th>Medication</th><th>Route</th><th>Frequency</th><th>Start</th><th>Status</th></tr></thead>
-      <tbody>${ORDERS.filter(o=>o.group==='other').map(medRow).join('')}</tbody></table></div></div>
+      <tbody>${ORDERS.filter(o=>o.group==='other').map(medRow).join('')}</tbody></table></div></div>`:''}
     <div class="card"><h3>Lab, nursing &amp; other orders</h3><div class="body" style="padding:0"><table class="ot">
       <thead><tr><th style="width:90px">Type</th><th>Order</th><th style="width:90px">Status</th></tr></thead>
       <tbody>${NONMED.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td><span class="badge ${r[2]==='Active'?'b-act':'b-dc'}">${r[2]}</span></td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h3>Vital signs</h3><div class="body" style="padding:0"><table class="ot">
+      <thead><tr><th>Taken</th><th>BP</th><th>HR</th><th>RR</th><th>Temp</th><th>SpO₂</th></tr></thead>
+      <tbody><tr><td>${stamp(PT.vitals.t)}</td><td>${PT.vitals.bp}</td><td>${PT.vitals.hr}</td><td>${PT.vitals.rr}</td><td>${PT.vitals.temp}</td><td>${PT.vitals.spo2}</td></tr></tbody></table></div></div>
     <div class="card"><h3>Results review</h3><div class="body" style="padding:0"><table class="ot">
       <thead><tr><th>Collected</th><th>Test</th><th>Result</th><th>Units</th><th>Reference</th></tr></thead><tbody>${labs}</tbody></table></div></div></div>`;
 }
@@ -540,8 +520,8 @@ function tipHTML(o){
   if(o.calc) h+=`<p>${esc(o.calc)}</p>`;
   if(o.dc) h+=`<p style="color:var(--red)">${esc(o.dc)}</p>`;
   if(o.kind==='infusion'){
-    h+=`<p>Start immediately after baseline blood work is collected.<br>Initial dosing: 18 units/kg/hr based on dosing weight ${W} kg.</p>
-    <div class="box"><b>PTT-Adjusted Heparin Therapy Nomogram: THERAPEUTIC PTT TARGET 46 – 70 sec</b></div>
+    h+=`<p>Start immediately after baseline blood work is collected.<br>Initial dosing: 18 units/kg/hr.</p>
+    <div class="box"><b>PTT-Adjusted Heparin Therapy Nomogram: THERAPEUTIC PTT TARGET ${GOAL} sec</b></div>
     <p>Repeat PTT 6 hours after every rate change until 2 consecutive PTTs are within goal, then daily.</p>
     <p><b>For PTT of:</b></p>${NOMO.map(n=>`<div>${n.range} sec — ${n.text}</div>`).join('')}
     <p style="margin-top:6px">Call provider if PTT > 150 sec, platelets < 100,000 or ≥ 50% drop, or any bleeding.</p>`;
@@ -613,7 +593,7 @@ function handleScan(raw){
   }
   if(!ptVerified()){ alertBox('caution','Scan patient first','<p>Scan the patient\'s wristband before scanning medications.</p>'); return; }
   if(item.wrongPt){ log('Scanned bag labeled for another patient');
-    alertBox('alert','Medication labeled for a different patient',`<p><b>${esc(item.label)}</b></p><p>This bag was dispensed for <b>Whitaker, Harriet M. (MRN 1048527)</b>, not ${PT.name} (MRN ${PT.mrn}). Do not hang. Return it to pharmacy.</p>`); return; }
+    alertBox('alert','Medication labeled for a different patient',`<p><b>${esc(item.label)}</b></p><p>This bag was dispensed for <b>Thomson, James R. (MRN 4851026)</b>, not ${PT.name} (MRN ${PT.mrn}). Do not hang. Return it to pharmacy.</p>`); return; }
   if(item.msg){ log('Scanned non-ordered product: '+item.label); alertBox('alert','No matching order',`<p><b>${esc(item.label)}</b></p><p>${esc(item.msg)}</p>`); return; }
   const matches=ORDERS.filter(o=>o.codes.includes(code));
   const active=matches.filter(o=>o.status==='Active');
@@ -689,7 +669,7 @@ function awShell(o, ctx, cfg){
     </div>
     <footer><button class="btn sec" id="fC">✖ Cancel</button><button class="btn" id="fGo">✔ Accept</button></footer>`;
 }
-const SITES=['','R forearm PIV 20g','L antecubital PIV 18g'];
+const SITES=['','R forearm PIV 20G'];
 const siteSel = () => `<label>Site<select id="fSite">${SITES.map(s=>`<option value="${s}">${s||'— select —'}</option>`).join('')}</select></label>`;
 const bleedSel = () => `<label class="s2">Bleeding assessment<select id="fBleed"><option value="">— select —</option><option>No signs of bleeding</option><option>Bleeding noted — provider notified</option></select></label>`;
 const notGivenDetails = () => `<label class="s2">Reason not given<select id="fNG"><option value="">— select —</option><option>Patient refused</option><option>Held — provider order</option><option>Patient off unit</option><option>NPO</option><option>Medication unavailable</option></select></label>`;
@@ -738,7 +718,9 @@ function bolusForm(o, ctx, action){
       ${siteSel()}
       <label>Dose ordered<div class="iu"><input id="fUkg" inputmode="decimal" autofocus><span>unit/kg</span></div></label>
       <label>Dose<div class="iu"><input id="fU" inputmode="decimal"><span>unit</span></div></label>
-      <label>Volume<div class="iu"><input id="fV" inputmode="decimal"><span>mL</span></div></label>`
+      <label>Volume<div class="iu"><input id="fV" inputmode="decimal"><span>mL</span></div></label>
+      <label>Administer over<div class="iu"><input id="fDur" inputmode="decimal"><span>min</span></div></label>
+      <label>IV push rate<div class="iu"><input id="fPR" inputmode="decimal"><span>mL/min</span></div></label>`
       : notGivenDetails(),
     flow: given?bleedSel():null,
     info: given?(re?`<b>Pending per nomogram:</b> ${esc(S.rebolusDue.reason)}.<br>`:'')+HA_INFO+`<br>Product scanned: heparin <b>1,000 units/mL</b>, 10 mL vial.`:''
@@ -754,11 +736,13 @@ function bolusForm(o, ctx, action){
       checkNum('Dose ordered (unit/kg)',$('#fUkg').value,ukg,0,'Check the order / nomogram.'),
       checkNum('Dose (units)',$('#fU').value,expU,0,`unit/kg × ${W} kg, rounded to nearest 100 units.`),
       checkNum('Volume (mL)',$('#fV').value,expV,0.05,'Dose ÷ vial concentration (1,000 units/mL).'),
-      {label:'Route', ok:$('#fRt').value==='IV push', entered:$('#fRt').value, expected:'IV push', hint:'Check the ordered route.'}
+      {label:'Route', ok:$('#fRt').value==='IV push', entered:$('#fRt').value, expected:'IV push', hint:'Check the ordered route.'},
+      checkNum('Administer over (min)',$('#fDur').value,2,0,'Check the order for the push duration.'),
+      checkNum('IV push rate (mL/min)',$('#fPR').value,expV/2,0.05,'Volume ÷ ordered push time in minutes.')
     ];
     finishForm(checks,errs,()=>{
       const u=$('#fU').value, v=$('#fV').value;
-      recordAdmin(o,ctx,{action:'Given', cell:`${fmtN(u)} unit`, sub:[`${fmtN(u)} unit`], summary:`${fmtN(u)} units (${v} mL) ${$('#fRt').value}, ${$('#fSite').value}; ${$('#fBleed').value}`, checks, verifier:ver, schedFor:re?null:8*60});
+      recordAdmin(o,ctx,{action:'Given', cell:`${fmtN(u)} unit`, sub:[`${fmtN(u)} unit`], summary:`${fmtN(u)} units (${v} mL) ${$('#fRt').value} over ${$('#fDur').value} min (${$('#fPR').value} mL/min), ${$('#fSite').value}; ${$('#fBleed').value}`, checks, verifier:ver, schedFor:re?null:8*60});
       if(re) S.rebolusDue=null;
       closeModal(); toast('Documented: '+o.name);
     });
@@ -818,7 +802,7 @@ function infusionForm(o, ctx, act){
     if(act==='Begin Bag'||act==='New Bag'){ const vt=parseFloat($('#fVtbi').value); checks.push({label:'VTBI', ok:vt>0&&vt<=250, entered:isNaN(vt)?'(blank)':vt, expected:'≤ 250', hint:'Bag volume is 250 mL.'}); }
     checks.push(checkNum('Dose (unit/kg/h)',$('#fUkg').value,exp.ukg,0, act==='Rate Change'?'Current unit/kg/h plus or minus the nomogram change.':act==='Begin Bag'?'Check the order.':'The dose does not change with a new bag or restart.'));
     checks.push(checkNum('Dose (unit/h)',$('#fUh').value,exp.uh,5,`unit/kg/h × ${W} kg, rounded to nearest 10 unit/h.`));
-    checks.push(checkNum('Rate (mL/h)',$('#fRate').value,exp.rate,0.1,'unit/h ÷ 100 unit/mL.'));
+    checks.push(checkNum('Rate (mL/h)',$('#fRate').value,exp.rate,0.1,'unit/h ÷ bag concentration (unit/mL).'));
     finishForm(checks,errs,()=>{
       const ukg=parseFloat($('#fUkg').value), uh=parseFloat(String($('#fUh').value).replace(/,/g,'')), rate=parseFloat($('#fRate').value);
       let f={action:act, verifier:ver, checks, isRate:false, sub:[`${fmtN(uh)} unit/h`,`${fmtN(rate)} mL/h`]};
@@ -889,7 +873,7 @@ function renderInstr(){
     <h4>Result a lab</h4><div class="sec">
       <div class="row"><select id="iTest">${['aPTT','Platelets','Hemoglobin'].map(t=>`<option ${t===v2?'selected':''}>${t}</option>`).join('')}</select>
         <input id="iVal" inputmode="decimal" style="width:80px" placeholder="value" value="${esc(v1)}"><button class="btn sm" id="iPost">Post result</button></div>
-      <div class="row">Quick aPTT: ${[30,40,58,82,105].map(v=>`<button class="btn sm sec" data-apt="${v}">${v}</button>`).join('')}</div>
+      <div class="row">Quick aPTT: ${[42,58,80,121].map(v=>`<button class="btn sm sec" data-apt="${v}">${v}</button>`).join('')}</div>
       <div class="muted">Results post at the current sim time. Next aPTT due: ${nextAPTT()!=null?hm(nextAPTT()):'—'}</div></div>
     <h4>Settings</h4><div class="sec">
       <label class="row"><input type="checkbox" id="iFb" ${S.feedback?'checked':''}> Coaching feedback on calculation errors</label>
@@ -897,9 +881,10 @@ function renderInstr(){
     <h4>Simulate a scan (no scanner)</h4><div class="sec">
       <div class="row"><select id="iScan">${Object.keys(SCAN).map(k=>`<option value="${k}">${k}</option>`).join('')}</select><button class="btn sm sec" id="iScanGo">Scan</button></div></div>
     <h4>Expected values (answer key)</h4><div class="sec" style="font-size:12px">
-      Initial bolus: 80 × 82 = 6,560 → <b>6,600 units = 6.6 mL</b> of 1,000 units/mL<br>
-      Initial infusion: 18 × 82 = 1,476 → <b>1,480 units/hr = 14.8 mL/hr</b><br>
-      Rebolus 80 units/kg = <b>6,600 units</b>; 40 units/kg = 3,280 → <b>3,300 units</b><br>
+      Pit Stop 2 — bolus: 80 × 85 = <b>6,800 units = 6.8 mL</b> of 1,000 units/mL, pushed over 2 min (<b>3.4 mL/min</b>)<br>
+      Pit Stop 3 — infusion: 18 × 85 = <b>1,530 units/hr = 15.3 mL/hr</b><br>
+      Pit Stop 4 — aPTT 121: <b>hold 1 hr</b>, then 16 × 85 = <b>1,360 units/hr = 13.6 mL/hr</b><br>
+      Rebolus 80 units/kg = 6,800 units; 40 units/kg = 3,400 units<br>
       Current: ${S.inf.ukg!=null?`${fmtN(S.inf.ukg)} units/kg/hr · ${fmtN(S.inf.uh)} units/hr · ${fmtN(S.inf.rate)} mL/hr`:'not started'}</div>
     <h4>Debrief log</h4><div class="sec">
       <div class="row"><button class="btn sm sec" id="iCopy">Copy log</button></div>
@@ -934,17 +919,14 @@ function code39svg(text, h=56, x=2){
 }
 function showLabels(){
   const L=[
-    ['band','MRN1048572','WHITAKER, HAROLD J.','DOB 03/14/1958 · M · MRN 1048572 · Okafor, R MD','Correct patient wristband'],
-    ['band','MRN1048527','WHITAKER, HARRIET M.','DOB 09/02/1961 · F · MRN 1048527 · Rm 412-B','Distractor: roommate with similar name/MRN'],
-    ['','HEP25K572','heparin 25,000 units / 250 mL 0.45% NaCl','100 units/mL · Pt: WHITAKER, HAROLD J. MRN 1048572 · HIGH ALERT','Correct infusion bag'],
-    ['','HEP25K527','heparin 25,000 units / 250 mL 0.45% NaCl','100 units/mL · Pt: WHITAKER, HARRIET M. MRN 1048527 · HIGH ALERT','Distractor: bag for the wrong patient'],
+    ['band','MRN4851062','THOMPSON, JAMES','DOB 05/22/1962 · M · MRN 4851062 · NKA · Okafor, R MD','Correct patient wristband'],
+    ['band','MRN4851026','THOMSON, JAMES R.','DOB 11/03/1959 · M · MRN 4851026 · Rm 412-B','Distractor: roommate with similar name/MRN'],
+    ['','HEP25K062','heparin 25,000 units / 250 mL D5W','100 units/mL · Pt: THOMPSON, JAMES MRN 4851062 · HIGH ALERT','Correct infusion bag'],
+    ['','HEP25K026','heparin 25,000 units / 250 mL D5W','100 units/mL · Pt: THOMSON, JAMES R. MRN 4851026 · HIGH ALERT','Distractor: bag for the wrong patient'],
     ['','HEP1000','heparin 1,000 units/mL','10 mL multi-dose vial (10,000 units total)','Correct bolus/rebolus product'],
-    ['','HEP5000','heparin 5,000 units/mL','1 mL vial','Distractor: discontinued SubQ order'],
+    ['','HEP5000','heparin 5,000 units/mL','1 mL vial','Distractor: wrong concentration for IV bolus'],
     ['','HEPFLUSH10','heparin lock flush 10 units/mL','5 mL syringe','Distractor: look-alike concentration'],
-    ['','ENOX80','enoxaparin 80 mg/0.8 mL','Prefilled syringe','Distractor: not ordered (duplicate anticoagulant)'],
-    ['','PANTO40','pantoprazole 40 mg','EC tablet','Scheduled 0900'],
-    ['','APAP325','acetaminophen 325 mg','Tablet (give 2 for 650 mg)','PRN'],
-    ['','NSFLUSH10','0.9% sodium chloride flush','10 mL prefilled syringe','Scheduled q8h']
+    ['','ENOX80','enoxaparin 80 mg/0.8 mL','Prefilled syringe','Distractor: not ordered (duplicate anticoagulant)']
   ];
   openModal(`<header>Barcode label sheet (instructor)</header><div class="mb">
     <p class="muted" style="margin-top:0">Most imager scanners will read these directly from a screen. For bedside props, print the PDF label sheet. Barcodes are Code 39 (no check digit). The italic notes are for the instructor.</p>
